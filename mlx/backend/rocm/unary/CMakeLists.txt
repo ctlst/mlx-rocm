@@ -1,0 +1,31 @@
+target_sources(
+  mlx
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/abs.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/arccos.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/arccosh.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/arcsin.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/arcsinh.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/arctan.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/arctanh.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/ceil.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/cos.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/cosh.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/erf.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/erf_inv.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/exp.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/expm1.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/floor.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/log.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/log1p.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/logical_not.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/negative.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/round.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/sigmoid.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/sign.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/sin.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/sinh.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/sqrt.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/square.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/tan.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/tanh.hip)
+

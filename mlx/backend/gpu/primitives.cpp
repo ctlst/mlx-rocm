@@ -10,10 +10,16 @@
 #include <nvtx3/nvtx3.hpp>
 #endif
 
+#if defined(MLX_USE_ROCM)
+#include <roctracer/roctx.h>
+#endif
+
 #include <cassert>
 
 #if defined(MLX_USE_CUDA)
 #define MLX_PROFILER_RANGE(message) nvtx3::scoped_range r(message)
+#elif defined(MLX_USE_ROCM)
+#define MLX_PROFILER_RANGE(message) roctxRangePush(message); struct RoctxRangeGuard { ~RoctxRangeGuard() { roctxRangePop(); } } _roctx_guard
 #else
 #define MLX_PROFILER_RANGE(message)
 #endif
