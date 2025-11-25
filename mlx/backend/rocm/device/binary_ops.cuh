@@ -9,9 +9,32 @@
 
 namespace mlx::core::rocm {
 
-// Helper to get common type for binary operations
+// Helper to promote types for binary operations
+// Priority: double > float > hip_bfloat16/__half > int64 > int32 > smaller ints > bool
 template <typename T, typename U>
-using common_type_t = decltype(T{} + U{});
+struct BinaryResultType {
+  // Default: use the larger type, with T as fallback
+  using type = std::conditional_t<(sizeof(T) >= sizeof(U)), T, U>;
+};
+
+// Specialize for bool - always promote to the other type
+template <typename U>
+struct BinaryResultType<bool, U> {
+  using type = U;
+};
+
+template <typename T>
+struct BinaryResultType<T, bool> {
+  using type = T;
+};
+
+template <>
+struct BinaryResultType<bool, bool> {
+  using type = bool;
+};
+
+template <typename T, typename U>
+using common_type_t = typename BinaryResultType<T, U>::type;
 
 struct Add {
   template <typename T, typename U>
