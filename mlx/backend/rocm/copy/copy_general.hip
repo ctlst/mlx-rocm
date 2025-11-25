@@ -41,8 +41,8 @@ void copy_general_impl(
   }
   
   if (size > UINT32_MAX) {
-    hipLaunchKernelGGL(
-        (copy_general_kernel<HipSrcT, HipDstT, int64_t>),
+    hipLaunchKernel(
+        HIP_KERNEL_NAME(copy_general_kernel<HipSrcT, HipDstT, int64_t>),
         dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
         gpu_ptr<HipSrcT>(src) + src_offset,
         gpu_ptr<HipDstT>(dst) + dst_offset,
@@ -52,8 +52,8 @@ void copy_general_impl(
         dst_strides_param.data,
         ndim);
   } else {
-    hipLaunchKernelGGL(
-        (copy_general_kernel<HipSrcT, HipDstT, uint32_t>),
+    hipLaunchKernel(
+        HIP_KERNEL_NAME(copy_general_kernel<HipSrcT, HipDstT, uint32_t>),
         dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
         gpu_ptr<HipSrcT>(src) + src_offset,
         gpu_ptr<HipDstT>(dst) + dst_offset,

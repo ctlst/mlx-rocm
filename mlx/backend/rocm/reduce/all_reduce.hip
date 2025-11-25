@@ -25,16 +25,16 @@ void all_reduce(
     using T = hip_type_t<typename decltype(type_tag)::type>;
     dispatch_reduce_op<T>(type, [&](auto op) {
       // Initialize output
-      hipLaunchKernelGGL(
-          (init_reduce_kernel<T, decltype(op)>),
+      hipLaunchKernel(
+          HIP_KERNEL_NAME(init_reduce_kernel<T, decltype(op)>),
           dim3(1), dim3(1), 0, encoder.stream(),
           gpu_ptr<T>(out),
           static_cast<size_t>(1),
           op);
       
       // Perform reduction
-      hipLaunchKernelGGL(
-          (all_reduce_kernel<T, decltype(op), BLOCK_SIZE>),
+      hipLaunchKernel(
+          HIP_KERNEL_NAME(all_reduce_kernel<T, decltype(op), BLOCK_SIZE>),
           dim3(num_blocks), dim3(BLOCK_SIZE), 0, encoder.stream(),
           gpu_ptr<T>(in),
           gpu_ptr<T>(out),

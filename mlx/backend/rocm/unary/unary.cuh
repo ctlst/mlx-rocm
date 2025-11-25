@@ -144,15 +144,15 @@ void unary_op_gpu_inplace(
           int num_blocks = (size + block_size * N_READS - 1) / (block_size * N_READS);
           
           if (large) {
-            hipLaunchKernelGGL(
-                (rocm::unary_v<Op, InType, OutType, int64_t, N_READS>),
+            hipLaunchKernel(
+                HIP_KERNEL_NAME(rocm::unary_v<Op, InType, OutType, int64_t, N_READS>),
                 dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                 rocm::gpu_ptr<InType>(in),
                 rocm::gpu_ptr<OutType>(out),
                 static_cast<int64_t>(size));
           } else {
-            hipLaunchKernelGGL(
-                (rocm::unary_v<Op, InType, OutType, uint32_t, N_READS>),
+            hipLaunchKernel(
+                HIP_KERNEL_NAME(rocm::unary_v<Op, InType, OutType, uint32_t, N_READS>),
                 dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                 rocm::gpu_ptr<InType>(in),
                 rocm::gpu_ptr<OutType>(out),
@@ -182,8 +182,8 @@ void unary_op_gpu_inplace(
           
           if (work_per_thread == 4) {
             if (large) {
-              hipLaunchKernelGGL(
-                  (rocm::unary_g<Op, InType, OutType, int64_t, 4>),
+              hipLaunchKernel(
+                  HIP_KERNEL_NAME(rocm::unary_g<Op, InType, OutType, int64_t, 4>),
                   dim3(num_blocks_x, num_blocks_y), block_dims, 0, encoder.stream(),
                   rocm::gpu_ptr<InType>(in),
                   rocm::gpu_ptr<OutType>(out),
@@ -192,8 +192,8 @@ void unary_op_gpu_inplace(
                   strides_param.data,
                   ndim);
             } else {
-              hipLaunchKernelGGL(
-                  (rocm::unary_g<Op, InType, OutType, int32_t, 4>),
+              hipLaunchKernel(
+                  HIP_KERNEL_NAME(rocm::unary_g<Op, InType, OutType, int32_t, 4>),
                   dim3(num_blocks_x, num_blocks_y), block_dims, 0, encoder.stream(),
                   rocm::gpu_ptr<InType>(in),
                   rocm::gpu_ptr<OutType>(out),
@@ -204,8 +204,8 @@ void unary_op_gpu_inplace(
             }
           } else {
             if (large) {
-              hipLaunchKernelGGL(
-                  (rocm::unary_g<Op, InType, OutType, int64_t, 1>),
+              hipLaunchKernel(
+                  HIP_KERNEL_NAME(rocm::unary_g<Op, InType, OutType, int64_t, 1>),
                   dim3(num_blocks_x, num_blocks_y), block_dims, 0, encoder.stream(),
                   rocm::gpu_ptr<InType>(in),
                   rocm::gpu_ptr<OutType>(out),
@@ -214,8 +214,8 @@ void unary_op_gpu_inplace(
                   strides_param.data,
                   ndim);
             } else {
-              hipLaunchKernelGGL(
-                  (rocm::unary_g<Op, InType, OutType, int32_t, 1>),
+              hipLaunchKernel(
+                  HIP_KERNEL_NAME(rocm::unary_g<Op, InType, OutType, int32_t, 1>),
                   dim3(num_blocks_x, num_blocks_y), block_dims, 0, encoder.stream(),
                   rocm::gpu_ptr<InType>(in),
                   rocm::gpu_ptr<OutType>(out),

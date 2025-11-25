@@ -169,16 +169,16 @@ void binary_op_gpu_inplace(
           case BinaryOpType::ScalarScalar:
           case BinaryOpType::VectorVector:
             if (large) {
-              hipLaunchKernelGGL(
-                  (rocm::binary_v<Op, InA, InB, OutT, int64_t, N_READS>),
+              hipLaunchKernel(
+                  HIP_KERNEL_NAME(rocm::binary_v<Op, InA, InB, OutT, int64_t, N_READS>),
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   rocm::gpu_ptr<InA>(a),
                   rocm::gpu_ptr<InB>(b),
                   rocm::gpu_ptr<OutT>(out),
                   static_cast<int64_t>(size));
             } else {
-              hipLaunchKernelGGL(
-                  (rocm::binary_v<Op, InA, InB, OutT, uint32_t, N_READS>),
+              hipLaunchKernel(
+                  HIP_KERNEL_NAME(rocm::binary_v<Op, InA, InB, OutT, uint32_t, N_READS>),
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   rocm::gpu_ptr<InA>(a),
                   rocm::gpu_ptr<InB>(b),
@@ -188,16 +188,16 @@ void binary_op_gpu_inplace(
             break;
           case BinaryOpType::ScalarVector:
             if (large) {
-              hipLaunchKernelGGL(
-                  (rocm::binary_sv<Op, InA, InB, OutT, int64_t, N_READS>),
+              hipLaunchKernel(
+                  HIP_KERNEL_NAME(rocm::binary_sv<Op, InA, InB, OutT, int64_t, N_READS>),
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   rocm::gpu_ptr<InA>(a),
                   rocm::gpu_ptr<InB>(b),
                   rocm::gpu_ptr<OutT>(out),
                   static_cast<int64_t>(size));
             } else {
-              hipLaunchKernelGGL(
-                  (rocm::binary_sv<Op, InA, InB, OutT, uint32_t, N_READS>),
+              hipLaunchKernel(
+                  HIP_KERNEL_NAME(rocm::binary_sv<Op, InA, InB, OutT, uint32_t, N_READS>),
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   rocm::gpu_ptr<InA>(a),
                   rocm::gpu_ptr<InB>(b),
@@ -207,16 +207,16 @@ void binary_op_gpu_inplace(
             break;
           case BinaryOpType::VectorScalar:
             if (large) {
-              hipLaunchKernelGGL(
-                  (rocm::binary_vs<Op, InA, InB, OutT, int64_t, N_READS>),
+              hipLaunchKernel(
+                  HIP_KERNEL_NAME(rocm::binary_vs<Op, InA, InB, OutT, int64_t, N_READS>),
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   rocm::gpu_ptr<InA>(a),
                   rocm::gpu_ptr<InB>(b),
                   rocm::gpu_ptr<OutT>(out),
                   static_cast<int64_t>(size));
             } else {
-              hipLaunchKernelGGL(
-                  (rocm::binary_vs<Op, InA, InB, OutT, uint32_t, N_READS>),
+              hipLaunchKernel(
+                  HIP_KERNEL_NAME(rocm::binary_vs<Op, InA, InB, OutT, uint32_t, N_READS>),
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   rocm::gpu_ptr<InA>(a),
                   rocm::gpu_ptr<InB>(b),
@@ -234,8 +234,8 @@ void binary_op_gpu_inplace(
               b_strides_param.data[i] = b.strides()[i];
             }
             if (large) {
-              hipLaunchKernelGGL(
-                  (rocm::binary_g<Op, InA, InB, OutT, int64_t>),
+              hipLaunchKernel(
+                  HIP_KERNEL_NAME(rocm::binary_g<Op, InA, InB, OutT, int64_t>),
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   rocm::gpu_ptr<InA>(a),
                   rocm::gpu_ptr<InB>(b),
@@ -246,8 +246,8 @@ void binary_op_gpu_inplace(
                   b_strides_param.data,
                   out.ndim());
             } else {
-              hipLaunchKernelGGL(
-                  (rocm::binary_g<Op, InA, InB, OutT, uint32_t>),
+              hipLaunchKernel(
+                  HIP_KERNEL_NAME(rocm::binary_g<Op, InA, InB, OutT, uint32_t>),
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   rocm::gpu_ptr<InA>(a),
                   rocm::gpu_ptr<InB>(b),

@@ -53,7 +53,7 @@ target_link_libraries(mlx PRIVATE hip::device)
 target_link_libraries(mlx PRIVATE roc::rocblas)
 
 # Use hipRTC for JIT compilation
-target_link_libraries(mlx PRIVATE hip::hiprtc)
+target_link_libraries(mlx PRIVATE hiprtc::hiprtc)
 
 # Enable extended lambda for device code
 target_compile_options(mlx PRIVATE $<$<COMPILE_LANGUAGE:HIP>:-fgpu-allow-device-init>)

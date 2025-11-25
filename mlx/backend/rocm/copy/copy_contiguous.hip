@@ -24,15 +24,15 @@ void copy_contiguous_impl(
   int num_blocks = (size + block_size * N_READS - 1) / (block_size * N_READS);
   
   if (size > UINT32_MAX) {
-    hipLaunchKernelGGL(
-        (copy_contiguous_v_kernel<HipT, int64_t, N_READS>),
+    hipLaunchKernel(
+        HIP_KERNEL_NAME(copy_contiguous_v_kernel<HipT, int64_t, N_READS>),
         dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
         gpu_ptr<HipT>(src),
         gpu_ptr<HipT>(dst),
         static_cast<int64_t>(size));
   } else {
-    hipLaunchKernelGGL(
-        (copy_contiguous_v_kernel<HipT, uint32_t, N_READS>),
+    hipLaunchKernel(
+        HIP_KERNEL_NAME(copy_contiguous_v_kernel<HipT, uint32_t, N_READS>),
         dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
         gpu_ptr<HipT>(src),
         gpu_ptr<HipT>(dst),

@@ -58,8 +58,8 @@ void Select::eval_gpu(const std::vector<array>& inputs, array& out) {
     using T = rocm::hip_type_t<typename decltype(type_tag)::type>;
     
     if (size > UINT32_MAX) {
-      hipLaunchKernelGGL(
-          (rocm::select_kernel<T, int64_t>),
+      hipLaunchKernel(
+          HIP_KERNEL_NAME(rocm::select_kernel<T, int64_t>),
           dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
           rocm::gpu_ptr<bool>(cond),
           rocm::gpu_ptr<T>(a),
@@ -67,8 +67,8 @@ void Select::eval_gpu(const std::vector<array>& inputs, array& out) {
           rocm::gpu_ptr<T>(out),
           static_cast<int64_t>(size));
     } else {
-      hipLaunchKernelGGL(
-          (rocm::select_kernel<T, uint32_t>),
+      hipLaunchKernel(
+          HIP_KERNEL_NAME(rocm::select_kernel<T, uint32_t>),
           dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
           rocm::gpu_ptr<bool>(cond),
           rocm::gpu_ptr<T>(a),

@@ -26,8 +26,8 @@ void col_reduce(
   dispatch_numeric_types_rocm(in.dtype(), [&](auto type_tag) {
     using T = hip_type_t<typename decltype(type_tag)::type>;
     dispatch_reduce_op<T>(type, [&](auto op) {
-      hipLaunchKernelGGL(
-          (col_reduce_kernel<T, decltype(op), BLOCK_SIZE>),
+      hipLaunchKernel(
+          HIP_KERNEL_NAME(col_reduce_kernel<T, decltype(op), BLOCK_SIZE>),
           dim3(num_blocks), dim3(BLOCK_SIZE), 0, encoder.stream(),
           gpu_ptr<T>(in),
           gpu_ptr<T>(out),
