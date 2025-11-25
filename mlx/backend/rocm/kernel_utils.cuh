@@ -5,6 +5,7 @@
 #include "mlx/array.h"
 #include "mlx/backend/rocm/device/config.h"
 #include "mlx/backend/rocm/device/utils.cuh"
+#include "mlx/backend/rocm/rocm_utils.h"
 #include "mlx/dtype_utils.h"
 
 #include <hip/hip_runtime.h>
