@@ -139,42 +139,56 @@ struct Power {
 
 struct Equal {
   template <typename T, typename U>
-  __device__ bool operator()(T a, U b) {
+  __device__ bool operator()(const T& a, const U& b) {
     return a == b;
+  }
+};
+
+struct NaNEqual {
+  template <typename T, typename U>
+  __device__ bool operator()(const T& a, const U& b) {
+    using CommonT = common_type_t<T, U>;
+    CommonT ca = static_cast<CommonT>(a);
+    CommonT cb = static_cast<CommonT>(b);
+    if constexpr (is_floating_like_v<CommonT>) {
+      return ca == cb || (isnan(ca) && isnan(cb));
+    } else {
+      return ca == cb;
+    }
   }
 };
 
 struct NotEqual {
   template <typename T, typename U>
-  __device__ bool operator()(T a, U b) {
+  __device__ bool operator()(const T& a, const U& b) {
     return a != b;
   }
 };
 
 struct Greater {
   template <typename T, typename U>
-  __device__ bool operator()(T a, U b) {
+  __device__ bool operator()(const T& a, const U& b) {
     return a > b;
   }
 };
 
 struct GreaterEqual {
   template <typename T, typename U>
-  __device__ bool operator()(T a, U b) {
+  __device__ bool operator()(const T& a, const U& b) {
     return a >= b;
   }
 };
 
 struct Less {
   template <typename T, typename U>
-  __device__ bool operator()(T a, U b) {
+  __device__ bool operator()(const T& a, const U& b) {
     return a < b;
   }
 };
 
 struct LessEqual {
   template <typename T, typename U>
-  __device__ bool operator()(T a, U b) {
+  __device__ bool operator()(const T& a, const U& b) {
     return a <= b;
   }
 };
