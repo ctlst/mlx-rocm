@@ -26,8 +26,24 @@ inline constexpr bool is_floating_like_v = is_floating_like<T>::value;
 // Priority: double > float > hip_bfloat16/__half > int64 > int32 > smaller ints > bool
 template <typename T, typename U>
 struct BinaryResultType {
-  // Default: use the larger type, with T as fallback
-  using type = std::conditional_t<(sizeof(T) >= sizeof(U)), T, U>;
+  // When mixing floating-point and integer types, promote to floating-point
+  using type = std::conditional_t<
+    (is_floating_like_v<T> && std::is_integral_v<U>),
+    std::conditional_t<std::is_same_v<T, double> || std::is_same_v<U, double>, double,
+      std::conditional_t<std::is_same_v<T, float> || std::is_same_v<U, float> ||
+                        std::is_same_v<T, hip_bfloat16> || std::is_same_v<U, hip_bfloat16> ||
+                        std::is_same_v<T, __half> || std::is_same_v<U, __half>, float, T>>,
+    std::conditional_t<
+      (is_floating_like_v<U> && std::is_integral_v<T>),
+      std::conditional_t<std::is_same_v<T, double> || std::is_same_v<U, double>, double,
+        std::conditional_t<std::is_same_v<T, float> || std::is_same_v<U, float> ||
+                          std::is_same_v<T, hip_bfloat16> || std::is_same_v<U, hip_bfloat16> ||
+                          std::is_same_v<T, __half> || std::is_same_v<U, __half>, float, U>>,
+      // Both same category: use larger size, prefer T if equal
+      std::conditional_t<(sizeof(T) > sizeof(U)), T,
+        std::conditional_t<(sizeof(U) > sizeof(T)), U, T>>
+    >
+  >;
 };
 
 // Specialize for bool - always promote to the other type
