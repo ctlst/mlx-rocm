@@ -1,5 +1,7 @@
 // Copyright © 2025 Apple Inc.
 
+#include <numeric>
+
 #include "mlx/backend/rocm/device.h"
 #include "mlx/backend/rocm/allocator.h"
 #include "mlx/backend/common/slicing.h"
@@ -23,21 +25,32 @@ void concatenate_gpu(
     int axis,
     const Stream& s) {
   roctxRangePush("concatenate_gpu");
+  
+  // Compute cumulative sizes along axis
+  std::vector<int> sizes;
+  sizes.push_back(0);
+  for (auto& p : inputs) {
+    sizes.push_back(p.shape(axis));
+  }
+  std::partial_sum(sizes.cbegin(), sizes.cend(), sizes.begin());
+  
   auto& encoder = rocm::get_command_encoder(s);
   out.set_data(rocm::malloc_async(out.nbytes(), encoder));
   
-  size_t offset = 0;
-  for (const auto& in : inputs) {
-    if (in.size() == 0) continue;
+  auto strides = out.strides();
+  auto flags = out.flags();
+  flags.row_contiguous = false;
+  flags.col_contiguous = false;
+  flags.contiguous = false;
+  
+  for (size_t i = 0; i < inputs.size(); i++) {
+    if (inputs[i].size() == 0) continue;
     
-    auto [data_offset, out_strides] =
-        prepare_slice(out, offset, axis);
-    
-    copy_gpu_inplace(
-        in, out, in.shape(), in.strides(), out_strides,
-        0, data_offset, CopyType::GeneralGeneral, s);
-    
-    offset += in.shape(axis);
+    array out_slice(inputs[i].shape(), out.dtype(), nullptr, {});
+    size_t data_offset = strides[axis] * sizes[i];
+    out_slice.copy_shared_buffer(
+        out, strides, flags, out_slice.size(), data_offset);
+    copy_gpu_inplace(inputs[i], out_slice, CopyType::GeneralGeneral, s);
   }
   roctxRangePop();
 }
