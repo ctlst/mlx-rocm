@@ -13,6 +13,10 @@
 
 namespace mlx::core::rocm {
 
+// Alias TypeTag to type_identity for compatibility
+template <typename T>
+using TypeTag = type_identity<T>;
+
 // Type mapping from MLX types to HIP types
 template <typename T>
 struct hip_type {
@@ -53,8 +57,8 @@ inline dim3 get_block_dims(int dim0, int dim1, int dim2) {
 // Launch configuration helper
 inline std::pair<dim3, dim3> get_launch_args(
     size_t size,
-    const Shape& shape,
-    const Strides& strides,
+    const mlx::core::Shape& shape,
+    const mlx::core::Strides& strides,
     bool large,
     int n_reads = 1) {
   int block_size = 256;
@@ -62,53 +66,8 @@ inline std::pair<dim3, dim3> get_launch_args(
   return {dim3(n_blocks), dim3(block_size)};
 }
 
-// Dispatch helper for all types
-template <typename F>
-void dispatch_all_types(Dtype dtype, F&& f) {
-  switch (dtype) {
-    case bool_:
-      f(TypeTag<bool>{});
-      break;
-    case uint8:
-      f(TypeTag<uint8_t>{});
-      break;
-    case uint16:
-      f(TypeTag<uint16_t>{});
-      break;
-    case uint32:
-      f(TypeTag<uint32_t>{});
-      break;
-    case uint64:
-      f(TypeTag<uint64_t>{});
-      break;
-    case int8:
-      f(TypeTag<int8_t>{});
-      break;
-    case int16:
-      f(TypeTag<int16_t>{});
-      break;
-    case int32:
-      f(TypeTag<int32_t>{});
-      break;
-    case int64:
-      f(TypeTag<int64_t>{});
-      break;
-    case float16:
-      f(TypeTag<float16_t>{});
-      break;
-    case float32:
-      f(TypeTag<float>{});
-      break;
-    case bfloat16:
-      f(TypeTag<bfloat16_t>{});
-      break;
-    case complex64:
-      f(TypeTag<complex64_t>{});
-      break;
-    default:
-      throw std::runtime_error("Unsupported dtype");
-  }
-}
+// Note: dispatch_all_types is provided by mlx/dtype_utils.h
+// Use TypeTag<T> (alias for type_identity<T>) with lambdas
 
 // Dispatch helper for bool
 template <typename F>

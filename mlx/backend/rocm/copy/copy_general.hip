@@ -12,9 +12,9 @@ void copy_general_impl(
     CommandEncoder& encoder,
     const array& src,
     array& dst,
-    const Shape& data_shape,
-    const Strides& src_strides,
-    const Strides& dst_strides,
+    const mlx::core::Shape& data_shape,
+    const mlx::core::Strides& src_strides,
+    const mlx::core::Strides& dst_strides,
     int64_t src_offset,
     int64_t dst_offset) {
   using HipSrcT = hip_type_t<SrcT>;
@@ -69,9 +69,9 @@ void copy_general(
     CommandEncoder& encoder,
     const array& src,
     array& dst,
-    const Shape& data_shape,
-    const Strides& src_strides,
-    const Strides& dst_strides,
+    const mlx::core::Shape& data_shape,
+    const mlx::core::Strides& src_strides,
+    const mlx::core::Strides& dst_strides,
     int64_t src_offset,
     int64_t dst_offset) {
   dispatch_all_types(src.dtype(), [&](auto src_type_tag) {

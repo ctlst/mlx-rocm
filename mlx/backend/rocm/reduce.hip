@@ -3,7 +3,13 @@
 #include "mlx/backend/rocm/reduce/reduce.cuh"
 #include "mlx/backend/gpu/copy.h"
 
+// roctracer is optional - only used for profiling markers
+#if __has_include(<roctracer/roctx.h>)
 #include <roctracer/roctx.h>
+#else
+#define roctxRangePush(x) ((void)0)
+#define roctxRangePop() ((void)0)
+#endif
 
 namespace mlx::core {
 

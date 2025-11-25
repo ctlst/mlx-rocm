@@ -19,9 +19,10 @@ namespace mlx::core::rocm {
 ///////////////////////////////////////////////////////////////////////////////
 
 // To pass shape/strides to kernels via constant memory, their size must be
-// known at compile time.
-using Shape = int32_t[MAX_NDIM];
-using Strides = int64_t[MAX_NDIM];
+// known at compile time. Named with Kernel prefix to avoid conflict with
+// mlx::core::Shape (which is SmallVector<int>).
+using KernelShape = int32_t[MAX_NDIM];
+using KernelStrides = int64_t[MAX_NDIM];
 
 // Vectorized load/store.
 template <typename T, int N>
