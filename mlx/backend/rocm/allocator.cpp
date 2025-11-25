@@ -88,7 +88,7 @@ Buffer RocmAllocator::malloc(size_t size) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   // Check the buffer cache first
-  if (auto buf = buffer_cache_.reuse_buffer(size)) {
+  if (auto buf = buffer_cache_.reuse_from_cache(size)) {
     active_memory_ += buf->size;
     peak_memory_ = std::max(peak_memory_, active_memory_);
     return Buffer{buf};
@@ -152,7 +152,7 @@ void RocmAllocator::free(Buffer buffer) {
 
   // Add to cache for reuse
   if (buffer_cache_.cache_size() + buf->size <= max_pool_size_) {
-    buffer_cache_.recycle_buffer(buf);
+    buffer_cache_.recycle_to_cache(buf);
   } else {
     hip_free(buf);
   }

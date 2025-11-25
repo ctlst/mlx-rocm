@@ -156,7 +156,7 @@ class Device {
   int compute_capability_minor() const {
     return compute_capability_minor_;
   }
-  rocblas_handle rocblas_handle() const {
+  ::rocblas_handle get_rocblas_handle() const {
     return rocblas_;
   }
 

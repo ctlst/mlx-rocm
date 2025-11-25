@@ -49,7 +49,7 @@ void rocblas_gemm(
     int64_t b_batch_stride,
     int64_t c_batch_stride) {
   
-  auto handle = encoder.device().rocblas_handle();
+  auto handle = encoder.device().get_rocblas_handle();
   
   // Set stream for rocBLAS
   CHECK_ROCBLAS_ERROR(rocblas_set_stream(handle, encoder.stream()));

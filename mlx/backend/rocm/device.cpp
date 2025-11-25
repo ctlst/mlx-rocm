@@ -78,13 +78,14 @@ void CommandEncoder::add_kernel_node(
     uint32_t smem_bytes,
     void** params) {
   // For simple execution without graphs, just launch the kernel
-  hipLaunchKernelGGL(
-      reinterpret_cast<void(*)(void)>(func),
+  // Use hipLaunchKernel which accepts void** params array
+  CHECK_HIP_ERROR(hipLaunchKernel(
+      func,
       grid_dim,
       block_dim,
+      params,
       smem_bytes,
-      stream_,
-      params);
+      stream_));
 }
 
 void CommandEncoder::add_kernel_node(

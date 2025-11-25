@@ -72,7 +72,15 @@ class RocmAllocator : public allocator::Allocator {
   std::mutex mutex_;
   size_t memory_limit_;
   size_t max_pool_size_;
-  BufferCache<HipBuffer> buffer_cache_;
+  BufferCache<HipBuffer> buffer_cache_{
+      64 * 1024,  // page_size: 64KB
+      [](HipBuffer* buf) { return buf->size; },
+      [](HipBuffer* buf) {
+        if (buf->data) {
+          hipFree(buf->data);
+        }
+        delete buf;
+      }};
   size_t active_memory_{0};
   size_t peak_memory_{0};
   std::vector<hipStream_t> free_streams_;
