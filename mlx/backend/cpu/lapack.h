@@ -15,7 +15,7 @@
 #include <Accelerate/Accelerate.h>
 #else
 #include <cblas.h>
-#include <lapack.h>
+#include <lapacke.h>
 #endif
 
 #if defined(LAPACK_GLOBAL) || defined(LAPACK_NAME)

@@ -87,6 +87,11 @@ build/
 # Jetbrains
 .cache
 
-# ROCm build notes
+# ROCm build artifacts
+ROCM_README.md
 ROCM_BUILD_STATUS.md
 build_errors.txt
+rocm-build/
+*.hipfb
+*.hipobj
+*.fatbin

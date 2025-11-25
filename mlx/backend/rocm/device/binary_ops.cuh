@@ -140,7 +140,8 @@ struct Power {
 struct Equal {
   template <typename T, typename U>
   __device__ bool operator()(const T& a, const U& b) {
-    return a == b;
+    using CommonT = common_type_t<T, U>;
+    return static_cast<CommonT>(a) == static_cast<CommonT>(b);
   }
 };
 
@@ -151,7 +152,15 @@ struct NaNEqual {
     CommonT ca = static_cast<CommonT>(a);
     CommonT cb = static_cast<CommonT>(b);
     if constexpr (is_floating_like_v<CommonT>) {
-      return ca == cb || (isnan(ca) && isnan(cb));
+      // For floating-point types, check NaN equality
+      if constexpr (std::is_same_v<CommonT, float>) {
+        return ca == cb || (__isnanf(ca) && __isnanf(cb));
+      } else if constexpr (std::is_same_v<CommonT, double>) {
+        return ca == cb || (__isnan(ca) && __isnan(cb));
+      } else {
+        // For other floating types, just do regular comparison
+        return ca == cb;
+      }
     } else {
       return ca == cb;
     }
@@ -161,55 +170,60 @@ struct NaNEqual {
 struct NotEqual {
   template <typename T, typename U>
   __device__ bool operator()(const T& a, const U& b) {
-    return a != b;
+    using CommonT = common_type_t<T, U>;
+    return static_cast<CommonT>(a) != static_cast<CommonT>(b);
   }
 };
 
 struct Greater {
   template <typename T, typename U>
   __device__ bool operator()(const T& a, const U& b) {
-    return a > b;
+    using CommonT = common_type_t<T, U>;
+    return static_cast<CommonT>(a) > static_cast<CommonT>(b);
   }
 };
 
 struct GreaterEqual {
   template <typename T, typename U>
   __device__ bool operator()(const T& a, const U& b) {
-    return a >= b;
+    using CommonT = common_type_t<T, U>;
+    return static_cast<CommonT>(a) >= static_cast<CommonT>(b);
   }
 };
 
 struct Less {
   template <typename T, typename U>
   __device__ bool operator()(const T& a, const U& b) {
-    return a < b;
+    using CommonT = common_type_t<T, U>;
+    return static_cast<CommonT>(a) < static_cast<CommonT>(b);
   }
 };
 
 struct LessEqual {
   template <typename T, typename U>
   __device__ bool operator()(const T& a, const U& b) {
-    return a <= b;
+    using CommonT = common_type_t<T, U>;
+    return static_cast<CommonT>(a) <= static_cast<CommonT>(b);
   }
 };
 
 struct LogicalAnd {
   template <typename T, typename U>
-  __device__ bool operator()(T a, U b) {
+  __device__ bool operator()(const T& a, const U& b) {
     return static_cast<bool>(a) && static_cast<bool>(b);
   }
 };
 
 struct LogicalOr {
   template <typename T, typename U>
-  __device__ bool operator()(T a, U b) {
+  __device__ bool operator()(const T& a, const U& b) {
     return static_cast<bool>(a) || static_cast<bool>(b);
   }
 };
 
 struct BitwiseAnd {
   template <typename T, typename U>
-  __device__ common_type_t<T, U> operator()(T a, U b) {
+  __device__ common_type_t<T, U> operator()(const T& a, const U& b) {
     using R = common_type_t<T, U>;
     return static_cast<R>(a) & static_cast<R>(b);
   }
@@ -217,7 +231,7 @@ struct BitwiseAnd {
 
 struct BitwiseOr {
   template <typename T, typename U>
-  __device__ common_type_t<T, U> operator()(T a, U b) {
+  __device__ common_type_t<T, U> operator()(const T& a, const U& b) {
     using R = common_type_t<T, U>;
     return static_cast<R>(a) | static_cast<R>(b);
   }
@@ -225,7 +239,7 @@ struct BitwiseOr {
 
 struct BitwiseXor {
   template <typename T, typename U>
-  __device__ common_type_t<T, U> operator()(T a, U b) {
+  __device__ common_type_t<T, U> operator()(const T& a, const U& b) {
     using R = common_type_t<T, U>;
     return static_cast<R>(a) ^ static_cast<R>(b);
   }
@@ -233,7 +247,7 @@ struct BitwiseXor {
 
 struct LeftShift {
   template <typename T, typename U>
-  __device__ common_type_t<T, U> operator()(T a, U b) {
+  __device__ common_type_t<T, U> operator()(const T& a, const U& b) {
     using R = common_type_t<T, U>;
     return static_cast<R>(a) << static_cast<R>(b);
   }
@@ -241,7 +255,7 @@ struct LeftShift {
 
 struct RightShift {
   template <typename T, typename U>
-  __device__ common_type_t<T, U> operator()(T a, U b) {
+  __device__ common_type_t<T, U> operator()(const T& a, const U& b) {
     using R = common_type_t<T, U>;
     return static_cast<R>(a) >> static_cast<R>(b);
   }
@@ -249,7 +263,7 @@ struct RightShift {
 
 struct ArcTan2 {
   template <typename T, typename U>
-  __device__ common_type_t<T, U> operator()(T a, U b) {
+  __device__ common_type_t<T, U> operator()(const T& a, const U& b) {
     using R = common_type_t<T, U>;
     return static_cast<R>(atan2(static_cast<double>(a), static_cast<double>(b)));
   }
@@ -257,7 +271,7 @@ struct ArcTan2 {
 
 struct LogAddExp {
   template <typename T, typename U>
-  __device__ common_type_t<T, U> operator()(T a, U b) {
+  __device__ common_type_t<T, U> operator()(const T& a, const U& b) {
     using R = common_type_t<T, U>;
     double ra = static_cast<double>(a);
     double rb = static_cast<double>(b);
