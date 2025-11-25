@@ -93,9 +93,9 @@ struct Erf {
   template <typename T>
   __device__ T operator()(T x) {
     if constexpr (std::is_same_v<T, __half>) {
-      return erf(__half2float(x));
+      return __half(erf(static_cast<float>(x)));
     } else if constexpr (std::is_same_v<T, hip_bfloat16>) {
-      return erf(__bfloat162float(x));
+      return hip_bfloat16(erf(static_cast<float>(x)));
     } else {
       return erf(x);
     }
@@ -106,9 +106,9 @@ struct ErfInv {
   template <typename T>
   __device__ T operator()(T x) {
     if constexpr (std::is_same_v<T, __half>) {
-      return erfinv(__half2float(x));
+      return __half(erfinv(static_cast<float>(x)));
     } else if constexpr (std::is_same_v<T, hip_bfloat16>) {
-      return erfinv(__bfloat162float(x));
+      return hip_bfloat16(erfinv(static_cast<float>(x)));
     } else {
       return erfinv(x);
     }
@@ -126,9 +126,9 @@ struct Expm1 {
   template <typename T>
   __device__ T operator()(T x) {
     if constexpr (std::is_same_v<T, __half>) {
-      return expm1(__half2float(x));
+      return __half(expm1(static_cast<float>(x)));
     } else if constexpr (std::is_same_v<T, hip_bfloat16>) {
-      return expm1(__bfloat162float(x));
+      return hip_bfloat16(expm1(static_cast<float>(x)));
     } else {
       return expm1(x);
     }

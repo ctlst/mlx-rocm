@@ -28,7 +28,7 @@ __global__ void unary_v(const In* in, Out* out, IdxT size) {
 
   if ((index + 1) * N_READS > size) {
     for (IdxT i = index * N_READS; i < size; ++i) {
-      out[i] = Op{}(in[i]);
+      out[i] = static_cast<Out>(Op{}(in[i]));
     }
   } else {
     auto in_vec = load_vector<N_READS>(in, index);
@@ -36,7 +36,7 @@ __global__ void unary_v(const In* in, Out* out, IdxT size) {
     AlignedVector<Out, N_READS> out_vec;
 #pragma unroll
     for (int i = 0; i < N_READS; ++i) {
-      out_vec[i] = Op{}(in_vec[i]);
+      out_vec[i] = static_cast<Out>(Op{}(in_vec[i]));
     }
 
     store_vector<N_READS>(out, index, out_vec);
@@ -67,7 +67,7 @@ __global__ void unary_g(
     AlignedVector<Out, N_READS> out_vec;
 #pragma unroll
     for (int i = 0; i < N_READS; ++i) {
-      out_vec[i] = Op{}(in_vec[i]);
+      out_vec[i] = static_cast<Out>(Op{}(in_vec[i]));
     }
     store_vector(out + shape_x * index_rest, index_x, out_vec, shape_x);
   }

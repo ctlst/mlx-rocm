@@ -38,12 +38,12 @@ __global__ void binary_v(
     AlignedVector<Out, N_READS> out_vec;
 #pragma unroll
     for (int i = 0; i < N_READS; ++i) {
-      out_vec[i] = Op{}(a_vec[i], b_vec[i]);
+      out_vec[i] = static_cast<Out>(Op{}(a_vec[i], b_vec[i]));
     }
     store_vector<N_READS>(out, index, out_vec);
   } else if (vec_idx < size) {
     for (IdxT i = vec_idx; i < size; ++i) {
-      out[i] = Op{}(a[i], b[i]);
+      out[i] = static_cast<Out>(Op{}(a[i], b[i]));
     }
   }
 }
@@ -64,12 +64,12 @@ __global__ void binary_sv(
     AlignedVector<Out, N_READS> out_vec;
 #pragma unroll
     for (int i = 0; i < N_READS; ++i) {
-      out_vec[i] = Op{}(a_val, b_vec[i]);
+      out_vec[i] = static_cast<Out>(Op{}(a_val, b_vec[i]));
     }
     store_vector<N_READS>(out, index, out_vec);
   } else if (vec_idx < size) {
     for (IdxT i = vec_idx; i < size; ++i) {
-      out[i] = Op{}(a_val, b[i]);
+      out[i] = static_cast<Out>(Op{}(a_val, b[i]));
     }
   }
 }
@@ -90,12 +90,12 @@ __global__ void binary_vs(
     AlignedVector<Out, N_READS> out_vec;
 #pragma unroll
     for (int i = 0; i < N_READS; ++i) {
-      out_vec[i] = Op{}(a_vec[i], b_val);
+      out_vec[i] = static_cast<Out>(Op{}(a_vec[i], b_val));
     }
     store_vector<N_READS>(out, index, out_vec);
   } else if (vec_idx < size) {
     for (IdxT i = vec_idx; i < size; ++i) {
-      out[i] = Op{}(a[i], b_val);
+      out[i] = static_cast<Out>(Op{}(a[i], b_val));
     }
   }
 }
@@ -115,7 +115,7 @@ __global__ void binary_g(
   if (index < size) {
     IdxT a_idx = elem_to_loc(index, shape, a_strides, ndim);
     IdxT b_idx = elem_to_loc(index, shape, b_strides, ndim);
-    out[index] = Op{}(a[a_idx], b[b_idx]);
+    out[index] = static_cast<Out>(Op{}(a[a_idx], b[b_idx]));
   }
 }
 
