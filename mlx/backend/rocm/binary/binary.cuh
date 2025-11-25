@@ -119,10 +119,40 @@ __global__ void binary_g(
   }
 }
 
-template <typename Op, typename In1, typename In2, typename Out>
+template <typename Op, typename In, typename Out>
 constexpr bool supports_binary_op() {
-  // Add type checking as needed
-  return true;
+  if (std::is_same_v<Op, Add> || std::is_same_v<Op, Divide> ||
+      std::is_same_v<Op, Maximum> || std::is_same_v<Op, Minimum> ||
+      std::is_same_v<Op, Multiply> || std::is_same_v<Op, Subtract> ||
+      std::is_same_v<Op, Power> || std::is_same_v<Op, Remainder>) {
+    return std::is_same_v<In, Out>;
+  }
+  if (std::is_same_v<Op, Equal> || std::is_same_v<Op, Greater> ||
+      std::is_same_v<Op, GreaterEqual> || std::is_same_v<Op, Less> ||
+      std::is_same_v<Op, LessEqual> || std::is_same_v<Op, NotEqual>) {
+    return std::is_same_v<Out, bool>;
+  }
+  if (std::is_same_v<Op, LogicalAnd> || std::is_same_v<Op, LogicalOr>) {
+    return std::is_same_v<Out, bool> && std::is_same_v<In, bool>;
+  }
+  if (std::is_same_v<Op, NaNEqual>) {
+    return std::is_same_v<Out, bool> && is_inexact_v<In>;
+  }
+  if (std::is_same_v<Op, LogAddExp>) {
+    return std::is_same_v<In, Out> && is_inexact_v<In>;
+  }
+  if (std::is_same_v<Op, ArcTan2>) {
+    return std::is_same_v<In, Out> && is_floating_v<In>;
+  }
+  if (std::is_same_v<Op, BitwiseAnd> || std::is_same_v<Op, BitwiseOr> ||
+      std::is_same_v<Op, BitwiseXor>) {
+    return std::is_same_v<In, Out> && std::is_integral_v<In>;
+  }
+  if (std::is_same_v<Op, LeftShift> || std::is_same_v<Op, RightShift>) {
+    return std::is_same_v<In, Out> && std::is_integral_v<In> &&
+        !std::is_same_v<In, bool>;
+  }
+  return false;
 }
 
 } // namespace rocm
@@ -149,16 +179,15 @@ void binary_op_gpu_inplace(
   bool large = out.size() > UINT32_MAX;
   
   // Use ROCm-specific dispatch that excludes complex64
-  rocm::dispatch_all_types_rocm(a.dtype(), [&](auto a_type_tag) {
-    rocm::dispatch_all_types_rocm(b.dtype(), [&](auto b_type_tag) {
-      rocm::dispatch_all_types_rocm(out.dtype(), [&](auto out_type_tag) {
-        using A_T = typename decltype(a_type_tag)::type;
-        using B_T = typename decltype(b_type_tag)::type;
-        using Out_T = typename decltype(out_type_tag)::type;
-        
-        using InA = rocm::hip_type_t<A_T>;
-        using InB = rocm::hip_type_t<B_T>;
-        using OutT = rocm::hip_type_t<Out_T>;
+  rocm::dispatch_all_types_rocm(a.dtype(), [&](auto in_type_tag) {
+    rocm::dispatch_all_types_rocm(out.dtype(), [&](auto out_type_tag) {
+      using In_T = typename decltype(in_type_tag)::type;
+      using Out_T = typename decltype(out_type_tag)::type;
+
+      if constexpr (rocm::supports_binary_op<Op, In_T, Out_T>()) {
+
+        using InType = rocm::hip_type_t<In_T>;
+        using OutType = rocm::hip_type_t<Out_T>;
         
         constexpr int N_READS = 4;
         int block_size = 256;
@@ -169,63 +198,63 @@ void binary_op_gpu_inplace(
           case BinaryOpType::ScalarScalar:
           case BinaryOpType::VectorVector:
             if (large) {
-              auto* a_ptr = rocm::gpu_ptr<InA>(a);
-              auto* b_ptr = rocm::gpu_ptr<InB>(b);
-              auto* out_ptr = rocm::gpu_ptr<OutT>(out);
+              auto* a_ptr = rocm::gpu_ptr<InType>(a);
+              auto* b_ptr = rocm::gpu_ptr<InType>(b);
+              auto* out_ptr = rocm::gpu_ptr<OutType>(out);
               int64_t size_val = static_cast<int64_t>(size);
               rocm::rocm_launch_kernel(
-                  rocm::binary_v<Op, InA, InB, OutT, int64_t, N_READS>,
+                  rocm::binary_v<Op, InType, InType, OutType, int64_t, N_READS>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val);
             } else {
-              auto* a_ptr = rocm::gpu_ptr<InA>(a);
-              auto* b_ptr = rocm::gpu_ptr<InB>(b);
-              auto* out_ptr = rocm::gpu_ptr<OutT>(out);
+              auto* a_ptr = rocm::gpu_ptr<InType>(a);
+              auto* b_ptr = rocm::gpu_ptr<InType>(b);
+              auto* out_ptr = rocm::gpu_ptr<OutType>(out);
               uint32_t size_val = static_cast<uint32_t>(size);
               rocm::rocm_launch_kernel(
-                  rocm::binary_v<Op, InA, InB, OutT, uint32_t, N_READS>,
+                  rocm::binary_v<Op, InType, InType, OutType, uint32_t, N_READS>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val);
             }
             break;
           case BinaryOpType::ScalarVector:
             if (large) {
-              auto* a_ptr = rocm::gpu_ptr<InA>(a);
-              auto* b_ptr = rocm::gpu_ptr<InB>(b);
-              auto* out_ptr = rocm::gpu_ptr<OutT>(out);
+              auto* a_ptr = rocm::gpu_ptr<InType>(a);
+              auto* b_ptr = rocm::gpu_ptr<InType>(b);
+              auto* out_ptr = rocm::gpu_ptr<OutType>(out);
               int64_t size_val = static_cast<int64_t>(size);
               rocm::rocm_launch_kernel(
-                  rocm::binary_sv<Op, InA, InB, OutT, int64_t, N_READS>,
+                  rocm::binary_sv<Op, InType, InType, OutType, int64_t, N_READS>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val);
             } else {
-              auto* a_ptr = rocm::gpu_ptr<InA>(a);
-              auto* b_ptr = rocm::gpu_ptr<InB>(b);
-              auto* out_ptr = rocm::gpu_ptr<OutT>(out);
+              auto* a_ptr = rocm::gpu_ptr<InType>(a);
+              auto* b_ptr = rocm::gpu_ptr<InType>(b);
+              auto* out_ptr = rocm::gpu_ptr<OutType>(out);
               uint32_t size_val = static_cast<uint32_t>(size);
               rocm::rocm_launch_kernel(
-                  rocm::binary_sv<Op, InA, InB, OutT, uint32_t, N_READS>,
+                  rocm::binary_sv<Op, InType, InType, OutType, uint32_t, N_READS>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val);
             }
             break;
           case BinaryOpType::VectorScalar:
             if (large) {
-              auto* a_ptr = rocm::gpu_ptr<InA>(a);
-              auto* b_ptr = rocm::gpu_ptr<InB>(b);
-              auto* out_ptr = rocm::gpu_ptr<OutT>(out);
+              auto* a_ptr = rocm::gpu_ptr<InType>(a);
+              auto* b_ptr = rocm::gpu_ptr<InType>(b);
+              auto* out_ptr = rocm::gpu_ptr<OutType>(out);
               int64_t size_val = static_cast<int64_t>(size);
               rocm::rocm_launch_kernel(
-                  rocm::binary_vs<Op, InA, InB, OutT, int64_t, N_READS>,
+                  rocm::binary_vs<Op, InType, InType, OutType, int64_t, N_READS>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val);
             } else {
-              auto* a_ptr = rocm::gpu_ptr<InA>(a);
-              auto* b_ptr = rocm::gpu_ptr<InB>(b);
-              auto* out_ptr = rocm::gpu_ptr<OutT>(out);
+              auto* a_ptr = rocm::gpu_ptr<InType>(a);
+              auto* b_ptr = rocm::gpu_ptr<InType>(b);
+              auto* out_ptr = rocm::gpu_ptr<OutType>(out);
               uint32_t size_val = static_cast<uint32_t>(size);
               rocm::rocm_launch_kernel(
-                  rocm::binary_vs<Op, InA, InB, OutT, uint32_t, N_READS>,
+                  rocm::binary_vs<Op, InType, InType, OutType, uint32_t, N_READS>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val);
             }
@@ -240,38 +269,38 @@ void binary_op_gpu_inplace(
               b_strides_param.data[i] = b.strides()[i];
             }
             if (large) {
-              auto* a_ptr = rocm::gpu_ptr<InA>(a);
-              auto* b_ptr = rocm::gpu_ptr<InB>(b);
-              auto* out_ptr = rocm::gpu_ptr<OutT>(out);
+              auto* a_ptr = rocm::gpu_ptr<InType>(a);
+              auto* b_ptr = rocm::gpu_ptr<InType>(b);
+              auto* out_ptr = rocm::gpu_ptr<OutType>(out);
               int64_t size_val = static_cast<int64_t>(size);
               int32_t* shape_data = shape_param.data;
               int64_t* a_strides_data = a_strides_param.data;
               int64_t* b_strides_data = b_strides_param.data;
               int ndim_val = out.ndim();
               rocm::rocm_launch_kernel(
-                  rocm::binary_g<Op, InA, InB, OutT, int64_t>,
+                  rocm::binary_g<Op, InType, InType, OutType, int64_t>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val, shape_data, a_strides_data, b_strides_data, ndim_val);
             } else {
-              auto* a_ptr = rocm::gpu_ptr<InA>(a);
-              auto* b_ptr = rocm::gpu_ptr<InB>(b);
-              auto* out_ptr = rocm::gpu_ptr<OutT>(out);
+              auto* a_ptr = rocm::gpu_ptr<InType>(a);
+              auto* b_ptr = rocm::gpu_ptr<InType>(b);
+              auto* out_ptr = rocm::gpu_ptr<OutType>(out);
               uint32_t size_val = static_cast<uint32_t>(size);
               int32_t* shape_data = shape_param.data;
               int64_t* a_strides_data = a_strides_param.data;
               int64_t* b_strides_data = b_strides_param.data;
               int ndim_val = out.ndim();
               rocm::rocm_launch_kernel(
-                  rocm::binary_g<Op, InA, InB, OutT, uint32_t>,
+                  rocm::binary_g<Op, InType, InType, OutType, uint32_t>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val, shape_data, a_strides_data, b_strides_data, ndim_val);
             }
             break;
           }
         }
-      });
-    });
-  });
+      } // close if constexpr
+    }); // close dispatch_all_types_rocm(out.dtype(), ...)
+  }); // close dispatch_all_types_rocm(a.dtype(), ...)
 }
 
 template <typename Op>

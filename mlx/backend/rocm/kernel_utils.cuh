@@ -37,6 +37,16 @@ struct TypeConvert<__half> {
   __host__ __device__ static float to_float(__half v) { return static_cast<float>(v); }
 };
 
+// Type traits for detecting floating numbers.
+template <typename T>
+inline constexpr bool is_floating_v =
+    std::is_same_v<T, float> || std::is_same_v<T, double> ||
+    std::is_same_v<T, float16_t> || std::is_same_v<T, bfloat16_t>;
+
+// Type traits for detecting complex or real floating point numbers.
+template <typename T>
+inline constexpr bool is_inexact_v = is_floating_v<T> || is_complex_v<T>;
+
 // Type mapping from MLX types to HIP types
 template <typename T>
 struct hip_type {

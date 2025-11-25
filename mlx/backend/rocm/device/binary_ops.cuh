@@ -222,42 +222,37 @@ struct LogicalOr {
 };
 
 struct BitwiseAnd {
-  template <typename T, typename U>
-  __device__ common_type_t<T, U> operator()(const T& a, const U& b) {
-    using R = common_type_t<T, U>;
-    return static_cast<R>(a) & static_cast<R>(b);
+  template <typename T>
+  __device__ T operator()(T x, T y) {
+    return x & y;
   }
 };
 
 struct BitwiseOr {
-  template <typename T, typename U>
-  __device__ common_type_t<T, U> operator()(const T& a, const U& b) {
-    using R = common_type_t<T, U>;
-    return static_cast<R>(a) | static_cast<R>(b);
+  template <typename T>
+  __device__ T operator()(T x, T y) {
+    return x | y;
   }
 };
 
 struct BitwiseXor {
-  template <typename T, typename U>
-  __device__ common_type_t<T, U> operator()(const T& a, const U& b) {
-    using R = common_type_t<T, U>;
-    return static_cast<R>(a) ^ static_cast<R>(b);
+  template <typename T>
+  __device__ T operator()(T x, T y) {
+    return x ^ y;
   }
 };
 
 struct LeftShift {
-  template <typename T, typename U>
-  __device__ common_type_t<T, U> operator()(const T& a, const U& b) {
-    using R = common_type_t<T, U>;
-    return static_cast<R>(a) << static_cast<R>(b);
+  template <typename T>
+  __device__ T operator()(T x, T y) {
+    return x << y;
   }
 };
 
 struct RightShift {
-  template <typename T, typename U>
-  __device__ common_type_t<T, U> operator()(const T& a, const U& b) {
-    using R = common_type_t<T, U>;
-    return static_cast<R>(a) >> static_cast<R>(b);
+  template <typename T>
+  __device__ T operator()(T x, T y) {
+    return x >> y;
   }
 };
 

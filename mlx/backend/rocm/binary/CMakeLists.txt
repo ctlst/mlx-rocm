@@ -16,11 +16,7 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/less_equal.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/logical_and.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/logical_or.hip
-          ${CMAKE_CURRENT_SOURCE_DIR}/bitwise_and.hip
-          ${CMAKE_CURRENT_SOURCE_DIR}/bitwise_or.hip
-          ${CMAKE_CURRENT_SOURCE_DIR}/bitwise_xor.hip
-          ${CMAKE_CURRENT_SOURCE_DIR}/left_shift.hip
-          ${CMAKE_CURRENT_SOURCE_DIR}/right_shift.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/bitwise_binary.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/arctan2.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/log_add_exp.hip)
 

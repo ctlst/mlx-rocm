@@ -16,6 +16,16 @@ struct Abs {
   __device__ T operator()(T x) {
     if constexpr (std::is_unsigned_v<T>) {
       return x;
+    } else if constexpr (std::is_same_v<T, float>) {
+      return fabsf(x);
+    } else if constexpr (std::is_same_v<T, double>) {
+      return fabs(x);
+    } else if constexpr (std::is_same_v<T, hip_bfloat16>) {
+      return hip_bfloat16(fabsf(static_cast<float>(x)));
+    } else if constexpr (std::is_same_v<T, __half>) {
+      return __half(fabsf(static_cast<float>(x)));
+    } else if constexpr (std::is_integral_v<T>) {
+      return x < 0 ? -x : x;
     } else {
       return abs(x);
     }
@@ -25,14 +35,26 @@ struct Abs {
 struct ArcCos {
   template <typename T>
   __device__ T operator()(T x) {
-    return acos(x);
+    if constexpr (std::is_same_v<T, hip_bfloat16>) {
+      return hip_bfloat16(acosf(static_cast<float>(x)));
+    } else if constexpr (std::is_same_v<T, __half>) {
+      return __half(acosf(static_cast<float>(x)));
+    } else {
+      return acos(x);
+    }
   }
 };
 
 struct ArcCosh {
   template <typename T>
   __device__ T operator()(T x) {
-    return acosh(x);
+    if constexpr (std::is_same_v<T, hip_bfloat16>) {
+      return hip_bfloat16(acoshf(static_cast<float>(x)));
+    } else if constexpr (std::is_same_v<T, __half>) {
+      return __half(acoshf(static_cast<float>(x)));
+    } else {
+      return acosh(x);
+    }
   }
 };
 
@@ -69,6 +91,10 @@ struct Ceil {
   __device__ T operator()(T x) {
     if constexpr (std::is_integral_v<T>) {
       return x;
+    } else if constexpr (std::is_same_v<T, hip_bfloat16>) {
+      return hip_bfloat16(ceilf(static_cast<float>(x)));
+    } else if constexpr (std::is_same_v<T, __half>) {
+      return __half(ceilf(static_cast<float>(x)));
     } else {
       return ceil(x);
     }
@@ -183,7 +209,7 @@ struct Round {
 struct Sigmoid {
   template <typename T>
   __device__ T operator()(T x) {
-    T y = T(1) / (T(1) + exp(abs(x)));
+    T y = T(1) / (T(1) + exp(Abs{}(x)));
     return (x < T(0)) ? y : T(1) - y;
   }
 };
@@ -192,9 +218,9 @@ struct Sign {
   template <typename T>
   __device__ T operator()(T x) {
     if constexpr (std::is_unsigned_v<T>) {
-      return x != 0;
+      return static_cast<T>(x != 0);
     } else {
-      return (x > T(0)) - (x < T(0));
+      return static_cast<T>((x > T(0)) - (x < T(0)));
     }
   }
 };
