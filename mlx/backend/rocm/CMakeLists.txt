@@ -41,6 +41,10 @@ if(NOT DEFINED MLX_ROCM_ARCHITECTURES)
   set(MLX_ROCM_ARCHITECTURES "gfx1030")
 endif()
 message(STATUS "ROCm architectures: ${MLX_ROCM_ARCHITECTURES}")
+
+# Set HIP architectures for the target
+set_target_properties(mlx PROPERTIES HIP_ARCHITECTURES ${MLX_ROCM_ARCHITECTURES})
+
 # For cross-compilation, rely on environment variables instead of setting HIP_ARCHITECTURES
 # which would apply to all files in the target
 
