@@ -38,50 +38,50 @@ using common_type_t = typename BinaryResultType<T, U>::type;
 
 struct Add {
   template <typename T, typename U>
-  __device__ auto operator()(T a, U b) -> common_type_t<T, U> {
-    return a + b;
+  __device__ common_type_t<T, U> operator()(T a, U b) {
+    return static_cast<common_type_t<T, U>>(a) + static_cast<common_type_t<T, U>>(b);
   }
 };
 
 struct Subtract {
   template <typename T, typename U>
-  __device__ auto operator()(T a, U b) -> common_type_t<T, U> {
-    return a - b;
+  __device__ common_type_t<T, U> operator()(T a, U b) {
+    return static_cast<common_type_t<T, U>>(a) - static_cast<common_type_t<T, U>>(b);
   }
 };
 
 struct Multiply {
   template <typename T, typename U>
-  __device__ auto operator()(T a, U b) -> common_type_t<T, U> {
-    return a * b;
+  __device__ common_type_t<T, U> operator()(T a, U b) {
+    return static_cast<common_type_t<T, U>>(a) * static_cast<common_type_t<T, U>>(b);
   }
 };
 
 struct Divide {
   template <typename T, typename U>
-  __device__ auto operator()(T a, U b) -> common_type_t<T, U> {
-    return a / b;
+  __device__ common_type_t<T, U> operator()(T a, U b) {
+    return static_cast<common_type_t<T, U>>(a) / static_cast<common_type_t<T, U>>(b);
   }
 };
 
 struct Remainder {
   template <typename T, typename U>
-  __device__ auto operator()(T a, U b) -> common_type_t<T, U> {
+  __device__ common_type_t<T, U> operator()(T a, U b) {
     using R = common_type_t<T, U>;
     if constexpr (std::is_integral_v<R>) {
       return static_cast<R>(a) % static_cast<R>(b);
     } else {
-      return fmod(static_cast<R>(a), static_cast<R>(b));
+      return fmod(static_cast<double>(a), static_cast<double>(b));
     }
   }
 };
 
 struct Maximum {
   template <typename T, typename U>
-  __device__ auto operator()(T a, U b) -> common_type_t<T, U> {
+  __device__ common_type_t<T, U> operator()(T a, U b) {
     using R = common_type_t<T, U>;
     if constexpr (std::is_floating_point_v<R>) {
-      return fmax(static_cast<R>(a), static_cast<R>(b));
+      return fmax(static_cast<double>(a), static_cast<double>(b));
     } else {
       return a > b ? static_cast<R>(a) : static_cast<R>(b);
     }
@@ -90,10 +90,10 @@ struct Maximum {
 
 struct Minimum {
   template <typename T, typename U>
-  __device__ auto operator()(T a, U b) -> common_type_t<T, U> {
+  __device__ common_type_t<T, U> operator()(T a, U b) {
     using R = common_type_t<T, U>;
     if constexpr (std::is_floating_point_v<R>) {
-      return fmin(static_cast<R>(a), static_cast<R>(b));
+      return fmin(static_cast<double>(a), static_cast<double>(b));
     } else {
       return a < b ? static_cast<R>(a) : static_cast<R>(b);
     }
@@ -102,7 +102,7 @@ struct Minimum {
 
 struct Power {
   template <typename T, typename U>
-  __device__ auto operator()(T a, U b) -> common_type_t<T, U> {
+  __device__ common_type_t<T, U> operator()(T a, U b) {
     return pow(static_cast<double>(a), static_cast<double>(b));
   }
 };
@@ -150,20 +150,22 @@ struct LessEqual {
 };
 
 struct LogicalAnd {
-  __device__ bool operator()(bool a, bool b) {
-    return a && b;
+  template <typename T, typename U>
+  __device__ bool operator()(T a, U b) {
+    return static_cast<bool>(a) && static_cast<bool>(b);
   }
 };
 
 struct LogicalOr {
-  __device__ bool operator()(bool a, bool b) {
-    return a || b;
+  template <typename T, typename U>
+  __device__ bool operator()(T a, U b) {
+    return static_cast<bool>(a) || static_cast<bool>(b);
   }
 };
 
 struct BitwiseAnd {
   template <typename T, typename U>
-  __device__ auto operator()(T a, U b) -> common_type_t<T, U> {
+  __device__ common_type_t<T, U> operator()(T a, U b) {
     using R = common_type_t<T, U>;
     return static_cast<R>(a) & static_cast<R>(b);
   }
@@ -171,7 +173,7 @@ struct BitwiseAnd {
 
 struct BitwiseOr {
   template <typename T, typename U>
-  __device__ auto operator()(T a, U b) -> common_type_t<T, U> {
+  __device__ common_type_t<T, U> operator()(T a, U b) {
     using R = common_type_t<T, U>;
     return static_cast<R>(a) | static_cast<R>(b);
   }
@@ -179,7 +181,7 @@ struct BitwiseOr {
 
 struct BitwiseXor {
   template <typename T, typename U>
-  __device__ auto operator()(T a, U b) -> common_type_t<T, U> {
+  __device__ common_type_t<T, U> operator()(T a, U b) {
     using R = common_type_t<T, U>;
     return static_cast<R>(a) ^ static_cast<R>(b);
   }
@@ -187,7 +189,7 @@ struct BitwiseXor {
 
 struct LeftShift {
   template <typename T, typename U>
-  __device__ auto operator()(T a, U b) -> common_type_t<T, U> {
+  __device__ common_type_t<T, U> operator()(T a, U b) {
     using R = common_type_t<T, U>;
     return static_cast<R>(a) << static_cast<R>(b);
   }
@@ -195,7 +197,7 @@ struct LeftShift {
 
 struct RightShift {
   template <typename T, typename U>
-  __device__ auto operator()(T a, U b) -> common_type_t<T, U> {
+  __device__ common_type_t<T, U> operator()(T a, U b) {
     using R = common_type_t<T, U>;
     return static_cast<R>(a) >> static_cast<R>(b);
   }
@@ -203,20 +205,20 @@ struct RightShift {
 
 struct ArcTan2 {
   template <typename T, typename U>
-  __device__ auto operator()(T a, U b) -> common_type_t<T, U> {
+  __device__ common_type_t<T, U> operator()(T a, U b) {
     return atan2(static_cast<double>(a), static_cast<double>(b));
   }
 };
 
 struct LogAddExp {
   template <typename T, typename U>
-  __device__ auto operator()(T a, U b) -> common_type_t<T, U> {
+  __device__ common_type_t<T, U> operator()(T a, U b) {
     using R = common_type_t<T, U>;
-    R ra = static_cast<R>(a);
-    R rb = static_cast<R>(b);
-    R max_val = Maximum{}(ra, rb);
-    R min_val = Minimum{}(ra, rb);
-    return max_val + log1p(exp(min_val - max_val));
+    double ra = static_cast<double>(a);
+    double rb = static_cast<double>(b);
+    double max_val = fmax(ra, rb);
+    double min_val = fmin(ra, rb);
+    return static_cast<R>(max_val + log1p(exp(min_val - max_val)));
   }
 };
 
