@@ -41,27 +41,29 @@ void copy_general_impl(
   }
   
   if (size > UINT32_MAX) {
-    hipLaunchKernel(
+    // Store all arguments in local variables so we can take their addresses
+    auto* src_ptr = gpu_ptr<HipSrcT>(src) + src_offset;
+    auto* dst_ptr = gpu_ptr<HipDstT>(dst) + dst_offset;
+    int64_t size_val = static_cast<int64_t>(size);
+    int32_t* shape_data = shape_param.data;
+    int64_t* src_strides_data = src_strides_param.data;
+    int64_t* dst_strides_data = dst_strides_param.data;
+    rocm::rocm_launch_kernel(
         HIP_KERNEL_NAME(copy_general_kernel<HipSrcT, HipDstT, int64_t>),
         dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
-        gpu_ptr<HipSrcT>(src) + src_offset,
-        gpu_ptr<HipDstT>(dst) + dst_offset,
-        static_cast<int64_t>(size),
-        shape_param.data,
-        src_strides_param.data,
-        dst_strides_param.data,
-        ndim);
+        src_ptr, dst_ptr, size_val, shape_data, src_strides_data, dst_strides_data, ndim);
   } else {
-    hipLaunchKernel(
+    // Store all arguments in local variables so we can take their addresses
+    auto* src_ptr = gpu_ptr<HipSrcT>(src) + src_offset;
+    auto* dst_ptr = gpu_ptr<HipDstT>(dst) + dst_offset;
+    uint32_t size_val = static_cast<uint32_t>(size);
+    int32_t* shape_data = shape_param.data;
+    int64_t* src_strides_data = src_strides_param.data;
+    int64_t* dst_strides_data = dst_strides_param.data;
+    rocm::rocm_launch_kernel(
         HIP_KERNEL_NAME(copy_general_kernel<HipSrcT, HipDstT, uint32_t>),
         dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
-        gpu_ptr<HipSrcT>(src) + src_offset,
-        gpu_ptr<HipDstT>(dst) + dst_offset,
-        static_cast<uint32_t>(size),
-        shape_param.data,
-        src_strides_param.data,
-        dst_strides_param.data,
-        ndim);
+        src_ptr, dst_ptr, size_val, shape_data, src_strides_data, dst_strides_data, ndim);
   }
 }
 

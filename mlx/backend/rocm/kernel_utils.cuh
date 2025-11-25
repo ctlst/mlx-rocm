@@ -85,6 +85,25 @@ inline std::pair<dim3, dim3> get_launch_args(
   return {dim3(n_blocks), dim3(block_size)};
 }
 
+// Simple kernel launch helper for ROCm 6.x that packs arguments into void** array
+template<typename... Args>
+inline void rocm_launch_kernel(
+    const void* kernel_func,
+    dim3 grid_dim,
+    dim3 block_dim,
+    size_t shared_mem_bytes,
+    hipStream_t stream,
+    Args&&... args) {
+  void* kernel_args[] = {reinterpret_cast<void*>(&args)...};
+  CHECK_HIP_ERROR(hipLaunchKernel(
+      kernel_func,
+      grid_dim,
+      block_dim,
+      kernel_args,
+      shared_mem_bytes,
+      stream));
+}
+
 // Note: dispatch_all_types is provided by mlx/dtype_utils.h
 // Use TypeTag<T> (alias for type_identity<T>) with lambdas
 

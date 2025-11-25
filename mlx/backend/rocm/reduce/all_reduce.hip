@@ -25,21 +25,23 @@ void all_reduce(
     using T = hip_type_t<typename decltype(type_tag)::type>;
     dispatch_reduce_op<T>(type, [&](auto op) {
       // Initialize output
-      hipLaunchKernel(
+      auto* out_ptr_init = gpu_ptr<T>(out);
+      size_t init_size = static_cast<size_t>(1);
+      auto op_init = op;
+      rocm::rocm_launch_kernel(
           HIP_KERNEL_NAME(init_reduce_kernel<T, decltype(op)>),
           dim3(1), dim3(1), 0, encoder.stream(),
-          gpu_ptr<T>(out),
-          static_cast<size_t>(1),
-          op);
-      
+          out_ptr_init, init_size, op_init);
+
       // Perform reduction
-      hipLaunchKernel(
+      auto* in_ptr = gpu_ptr<T>(in);
+      auto* out_ptr = gpu_ptr<T>(out);
+      size_t reduce_size = size;
+      auto op_reduce = op;
+      rocm::rocm_launch_kernel(
           HIP_KERNEL_NAME(all_reduce_kernel<T, decltype(op), BLOCK_SIZE>),
           dim3(num_blocks), dim3(BLOCK_SIZE), 0, encoder.stream(),
-          gpu_ptr<T>(in),
-          gpu_ptr<T>(out),
-          size,
-          op);
+          in_ptr, out_ptr, reduce_size, op_reduce);
     });
   });
 }

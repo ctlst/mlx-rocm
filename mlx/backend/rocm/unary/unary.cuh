@@ -144,19 +144,21 @@ void unary_op_gpu_inplace(
           int num_blocks = (size + block_size * N_READS - 1) / (block_size * N_READS);
           
           if (large) {
-            hipLaunchKernel(
+            auto* in_ptr = rocm::gpu_ptr<InType>(in);
+            auto* out_ptr = rocm::gpu_ptr<OutType>(out);
+            int64_t size_val = static_cast<int64_t>(size);
+            rocm::rocm_launch_kernel(
                 HIP_KERNEL_NAME(rocm::unary_v<Op, InType, OutType, int64_t, N_READS>),
                 dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
-                rocm::gpu_ptr<InType>(in),
-                rocm::gpu_ptr<OutType>(out),
-                static_cast<int64_t>(size));
+                in_ptr, out_ptr, size_val);
           } else {
-            hipLaunchKernel(
+            auto* in_ptr = rocm::gpu_ptr<InType>(in);
+            auto* out_ptr = rocm::gpu_ptr<OutType>(out);
+            uint32_t size_val = static_cast<uint32_t>(size);
+            rocm::rocm_launch_kernel(
                 HIP_KERNEL_NAME(rocm::unary_v<Op, InType, OutType, uint32_t, N_READS>),
                 dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
-                rocm::gpu_ptr<InType>(in),
-                rocm::gpu_ptr<OutType>(out),
-                static_cast<uint32_t>(size));
+                in_ptr, out_ptr, size_val);
           }
         } else {
           auto [shape, strides] = rocm::collapse_contiguous_dims(in);
@@ -182,47 +184,47 @@ void unary_op_gpu_inplace(
           
           if (work_per_thread == 4) {
             if (large) {
-              hipLaunchKernel(
+              auto* in_ptr = rocm::gpu_ptr<InType>(in);
+              auto* out_ptr = rocm::gpu_ptr<OutType>(out);
+              int64_t rest_val = static_cast<int64_t>(rest);
+              int32_t* shape_data = shape_param.data;
+              int64_t* strides_data = strides_param.data;
+              rocm::rocm_launch_kernel(
                   HIP_KERNEL_NAME(rocm::unary_g<Op, InType, OutType, int64_t, 4>),
                   dim3(num_blocks_x, num_blocks_y), block_dims, 0, encoder.stream(),
-                  rocm::gpu_ptr<InType>(in),
-                  rocm::gpu_ptr<OutType>(out),
-                  static_cast<int64_t>(rest),
-                  shape_param.data,
-                  strides_param.data,
-                  ndim);
+                  in_ptr, out_ptr, rest_val, shape_data, strides_data, ndim);
             } else {
-              hipLaunchKernel(
+              auto* in_ptr = rocm::gpu_ptr<InType>(in);
+              auto* out_ptr = rocm::gpu_ptr<OutType>(out);
+              int32_t rest_val = static_cast<int32_t>(rest);
+              int32_t* shape_data = shape_param.data;
+              int64_t* strides_data = strides_param.data;
+              rocm::rocm_launch_kernel(
                   HIP_KERNEL_NAME(rocm::unary_g<Op, InType, OutType, int32_t, 4>),
                   dim3(num_blocks_x, num_blocks_y), block_dims, 0, encoder.stream(),
-                  rocm::gpu_ptr<InType>(in),
-                  rocm::gpu_ptr<OutType>(out),
-                  static_cast<int32_t>(rest),
-                  shape_param.data,
-                  strides_param.data,
-                  ndim);
+                  in_ptr, out_ptr, rest_val, shape_data, strides_data, ndim);
             }
           } else {
             if (large) {
-              hipLaunchKernel(
+              auto* in_ptr = rocm::gpu_ptr<InType>(in);
+              auto* out_ptr = rocm::gpu_ptr<OutType>(out);
+              int64_t rest_val = static_cast<int64_t>(rest);
+              int32_t* shape_data = shape_param.data;
+              int64_t* strides_data = strides_param.data;
+              rocm::rocm_launch_kernel(
                   HIP_KERNEL_NAME(rocm::unary_g<Op, InType, OutType, int64_t, 1>),
                   dim3(num_blocks_x, num_blocks_y), block_dims, 0, encoder.stream(),
-                  rocm::gpu_ptr<InType>(in),
-                  rocm::gpu_ptr<OutType>(out),
-                  static_cast<int64_t>(rest),
-                  shape_param.data,
-                  strides_param.data,
-                  ndim);
+                  in_ptr, out_ptr, rest_val, shape_data, strides_data, ndim);
             } else {
-              hipLaunchKernel(
+              auto* in_ptr = rocm::gpu_ptr<InType>(in);
+              auto* out_ptr = rocm::gpu_ptr<OutType>(out);
+              int32_t rest_val = static_cast<int32_t>(rest);
+              int32_t* shape_data = shape_param.data;
+              int64_t* strides_data = strides_param.data;
+              rocm::rocm_launch_kernel(
                   HIP_KERNEL_NAME(rocm::unary_g<Op, InType, OutType, int32_t, 1>),
                   dim3(num_blocks_x, num_blocks_y), block_dims, 0, encoder.stream(),
-                  rocm::gpu_ptr<InType>(in),
-                  rocm::gpu_ptr<OutType>(out),
-                  static_cast<int32_t>(rest),
-                  shape_param.data,
-                  strides_param.data,
-                  ndim);
+                  in_ptr, out_ptr, rest_val, shape_data, strides_data, ndim);
             }
           }
         }

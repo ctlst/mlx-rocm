@@ -24,19 +24,23 @@ void copy_contiguous_impl(
   int num_blocks = (size + block_size * N_READS - 1) / (block_size * N_READS);
   
   if (size > UINT32_MAX) {
-    hipLaunchKernel(
+    // Store all arguments in local variables so we can take their addresses
+    auto* src_ptr = gpu_ptr<HipT>(src);
+    auto* dst_ptr = gpu_ptr<HipT>(dst);
+    int64_t size_val = static_cast<int64_t>(size);
+    rocm::rocm_launch_kernel(
         HIP_KERNEL_NAME(copy_contiguous_v_kernel<HipT, int64_t, N_READS>),
         dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
-        gpu_ptr<HipT>(src),
-        gpu_ptr<HipT>(dst),
-        static_cast<int64_t>(size));
+        src_ptr, dst_ptr, size_val);
   } else {
-    hipLaunchKernel(
+    // Store all arguments in local variables so we can take their addresses
+    auto* src_ptr = gpu_ptr<HipT>(src);
+    auto* dst_ptr = gpu_ptr<HipT>(dst);
+    uint32_t size_val = static_cast<uint32_t>(size);
+    rocm::rocm_launch_kernel(
         HIP_KERNEL_NAME(copy_contiguous_v_kernel<HipT, uint32_t, N_READS>),
         dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
-        gpu_ptr<HipT>(src),
-        gpu_ptr<HipT>(dst),
-        static_cast<uint32_t>(size));
+        src_ptr, dst_ptr, size_val);
   }
 }
 

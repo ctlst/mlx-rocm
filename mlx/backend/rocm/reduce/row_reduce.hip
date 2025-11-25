@@ -25,14 +25,15 @@ void row_reduce(
   dispatch_numeric_types_rocm(in.dtype(), [&](auto type_tag) {
     using T = hip_type_t<typename decltype(type_tag)::type>;
     dispatch_reduce_op<T>(type, [&](auto op) {
-      hipLaunchKernel(
+      auto* in_ptr = gpu_ptr<T>(in);
+      auto* out_ptr = gpu_ptr<T>(out);
+      int64_t red_size = reduction_size;
+      int64_t out_size_val = out_size;
+      auto op_val = op;
+      rocm::rocm_launch_kernel(
           HIP_KERNEL_NAME(row_reduce_kernel<T, decltype(op), BLOCK_SIZE>),
           dim3(num_blocks), dim3(BLOCK_SIZE), 0, encoder.stream(),
-          gpu_ptr<T>(in),
-          gpu_ptr<T>(out),
-          reduction_size,
-          out_size,
-          op);
+          in_ptr, out_ptr, red_size, out_size_val, op_val);
     });
   });
 }

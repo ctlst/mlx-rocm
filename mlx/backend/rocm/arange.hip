@@ -48,14 +48,13 @@ void Arange::eval_gpu(const std::vector<array>& inputs, array& out) {
     using T = rocm::hip_type_t<typename decltype(type_tag)::type>;
     T start_val = rocm::TypeConvert<T>::from_float(static_cast<float>(start_));
     T step_val = rocm::TypeConvert<T>::from_float(static_cast<float>(step_));
-    
-    hipLaunchKernel(
+
+    // Store all arguments in local variables so we can take their addresses
+    auto* out_ptr = rocm::gpu_ptr<T>(out);
+    rocm::rocm_launch_kernel(
         HIP_KERNEL_NAME(rocm::arange_kernel<T>),
         dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
-        rocm::gpu_ptr<T>(out),
-        start_val,
-        step_val,
-        size);
+        out_ptr, start_val, step_val, size);
   });
   
   roctxRangePop();

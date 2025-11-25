@@ -58,23 +58,27 @@ void Select::eval_gpu(const std::vector<array>& inputs, array& out) {
     using T = rocm::hip_type_t<typename decltype(type_tag)::type>;
     
     if (size > UINT32_MAX) {
-      hipLaunchKernel(
+      // Store all arguments in local variables so we can take their addresses
+      auto* cond_ptr = rocm::gpu_ptr<bool>(cond);
+      auto* a_ptr = rocm::gpu_ptr<T>(a);
+      auto* b_ptr = rocm::gpu_ptr<T>(b);
+      auto* out_ptr = rocm::gpu_ptr<T>(out);
+      int64_t size_val = static_cast<int64_t>(size);
+      rocm::rocm_launch_kernel(
           HIP_KERNEL_NAME(rocm::select_kernel<T, int64_t>),
           dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
-          rocm::gpu_ptr<bool>(cond),
-          rocm::gpu_ptr<T>(a),
-          rocm::gpu_ptr<T>(b),
-          rocm::gpu_ptr<T>(out),
-          static_cast<int64_t>(size));
+          cond_ptr, a_ptr, b_ptr, out_ptr, size_val);
     } else {
-      hipLaunchKernel(
+      // Store all arguments in local variables so we can take their addresses
+      auto* cond_ptr = rocm::gpu_ptr<bool>(cond);
+      auto* a_ptr = rocm::gpu_ptr<T>(a);
+      auto* b_ptr = rocm::gpu_ptr<T>(b);
+      auto* out_ptr = rocm::gpu_ptr<T>(out);
+      uint32_t size_val = static_cast<uint32_t>(size);
+      rocm::rocm_launch_kernel(
           HIP_KERNEL_NAME(rocm::select_kernel<T, uint32_t>),
           dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
-          rocm::gpu_ptr<bool>(cond),
-          rocm::gpu_ptr<T>(a),
-          rocm::gpu_ptr<T>(b),
-          rocm::gpu_ptr<T>(out),
-          static_cast<uint32_t>(size));
+          cond_ptr, a_ptr, b_ptr, out_ptr, size_val);
     }
   });
   
