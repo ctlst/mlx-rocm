@@ -111,11 +111,46 @@ struct ReduceOr<bool> {
 
 template <typename T, typename Op>
 __device__ void atomic_reduce(T* addr, T val, Op op) {
-  // For 32-bit types, use atomicCAS
-  static_assert(sizeof(T) == 4 || sizeof(T) == 8 || sizeof(T) == 2,
-                "atomic_reduce requires 2, 4, or 8 byte types");
-  
-  if constexpr (sizeof(T) == 4) {
+  if constexpr (sizeof(T) == 1) {
+    // For 1-byte types, use 32-bit CAS with byte masking
+    size_t addr_int = reinterpret_cast<size_t>(addr);
+    int byte_offset = addr_int & 3;
+    unsigned int* addr32 = reinterpret_cast<unsigned int*>(addr_int & ~3ULL);
+    unsigned int old = *addr32;
+    unsigned int assumed;
+    do {
+      assumed = old;
+      unsigned char old_byte = (assumed >> (byte_offset * 8)) & 0xFF;
+      T old_val;
+      memcpy(&old_val, &old_byte, 1);
+      T new_val = op(old_val, val);
+      unsigned char new_byte;
+      memcpy(&new_byte, &new_val, 1);
+      unsigned int mask = 0xFFU << (byte_offset * 8);
+      unsigned int new32 = (assumed & ~mask) | (static_cast<unsigned int>(new_byte) << (byte_offset * 8));
+      old = atomicCAS(addr32, assumed, new32);
+    } while (assumed != old);
+  } else if constexpr (sizeof(T) == 2) {
+    // For 16-bit types, use 32-bit CAS on aligned address
+    size_t addr_int = reinterpret_cast<size_t>(addr);
+    bool is_high = (addr_int & 2) != 0;
+    unsigned int* addr32 = reinterpret_cast<unsigned int*>(addr_int & ~3ULL);
+    unsigned int old = *addr32;
+    unsigned int assumed;
+    do {
+      assumed = old;
+      unsigned short old_val16 = is_high ? (assumed >> 16) : (assumed & 0xFFFF);
+      T old_val;
+      memcpy(&old_val, &old_val16, sizeof(T));
+      T new_val = op(old_val, val);
+      unsigned short new_val16;
+      memcpy(&new_val16, &new_val, sizeof(T));
+      unsigned int new32 = is_high ? 
+          ((assumed & 0xFFFF) | (static_cast<unsigned int>(new_val16) << 16)) :
+          ((assumed & 0xFFFF0000) | new_val16);
+      old = atomicCAS(addr32, assumed, new32);
+    } while (assumed != old);
+  } else if constexpr (sizeof(T) == 4) {
     unsigned int* addr_as_uint = reinterpret_cast<unsigned int*>(addr);
     unsigned int old = *addr_as_uint;
     unsigned int assumed;
@@ -141,27 +176,6 @@ __device__ void atomic_reduce(T* addr, T val, Op op) {
       memcpy(&new_ull, &new_val, sizeof(T));
       old = atomicCAS(addr_as_ull, assumed, new_ull);
     } while (assumed != old);
-  } else if constexpr (sizeof(T) == 2) {
-    // For 16-bit types, need to handle alignment carefully
-    // Use 32-bit CAS on aligned address
-    size_t addr_int = reinterpret_cast<size_t>(addr);
-    bool is_high = (addr_int & 2) != 0;
-    unsigned int* addr32 = reinterpret_cast<unsigned int*>(addr_int & ~3ULL);
-    unsigned int old = *addr32;
-    unsigned int assumed;
-    do {
-      assumed = old;
-      unsigned short old_val16 = is_high ? (assumed >> 16) : (assumed & 0xFFFF);
-      T old_val;
-      memcpy(&old_val, &old_val16, sizeof(T));
-      T new_val = op(old_val, val);
-      unsigned short new_val16;
-      memcpy(&new_val16, &new_val, sizeof(T));
-      unsigned int new32 = is_high ? 
-          ((assumed & 0xFFFF) | (static_cast<unsigned int>(new_val16) << 16)) :
-          ((assumed & 0xFFFF0000) | new_val16);
-      old = atomicCAS(addr32, assumed, new32);
-    } while (assumed != old);
   }
 }
 
@@ -182,7 +196,27 @@ struct has_native_atomic_add<unsigned long long> : std::true_type {};
 template <typename T, typename Op>
 __device__ T warp_reduce(T val, Op op) {
   for (int offset = warpSize / 2; offset > 0; offset /= 2) {
-    val = op(val, __shfl_down(val, offset));
+    // __shfl_down may not preserve bf16/half types - use bit casting
+    if constexpr (sizeof(T) == 2) {
+      unsigned short val_bits;
+      memcpy(&val_bits, &val, sizeof(T));
+      unsigned short shuffled_bits = __shfl_down(val_bits, offset);
+      T shuffled_val;
+      memcpy(&shuffled_val, &shuffled_bits, sizeof(T));
+      val = op(val, shuffled_val);
+    } else if constexpr (sizeof(T) == 1) {
+      unsigned int val_int;
+      unsigned char val_byte;
+      memcpy(&val_byte, &val, 1);
+      val_int = val_byte;
+      unsigned int shuffled_int = __shfl_down(val_int, offset);
+      unsigned char shuffled_byte = static_cast<unsigned char>(shuffled_int);
+      T shuffled_val;
+      memcpy(&shuffled_val, &shuffled_byte, 1);
+      val = op(val, shuffled_val);
+    } else {
+      val = op(val, __shfl_down(val, offset));
+    }
   }
   return val;
 }
