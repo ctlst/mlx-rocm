@@ -40,7 +40,7 @@ struct ReduceMax {
 template <>
 struct ReduceMax<hip_bfloat16> {
   __device__ hip_bfloat16 operator()(hip_bfloat16 a, hip_bfloat16 b) {
-    return __bfloat162float(a) > __bfloat162float(b) ? a : b;
+    return static_cast<float>(a) > static_cast<float>(b) ? a : b;
   }
   __device__ hip_bfloat16 init() { return hip_bfloat16(-HUGE_VALF); }
 };
@@ -48,9 +48,9 @@ struct ReduceMax<hip_bfloat16> {
 template <>
 struct ReduceMax<__half> {
   __device__ __half operator()(__half a, __half b) {
-    return __half2float(a) > __half2float(b) ? a : b;
+    return static_cast<float>(a) > static_cast<float>(b) ? a : b;
   }
-  __device__ __half init() { return __float2half(-HUGE_VALF); }
+  __device__ __half init() { return __half(-HUGE_VALF); }
 };
 
 template <typename T>
@@ -62,7 +62,7 @@ struct ReduceMin {
 template <>
 struct ReduceMin<hip_bfloat16> {
   __device__ hip_bfloat16 operator()(hip_bfloat16 a, hip_bfloat16 b) {
-    return __bfloat162float(a) < __bfloat162float(b) ? a : b;
+    return static_cast<float>(a) < static_cast<float>(b) ? a : b;
   }
   __device__ hip_bfloat16 init() { return hip_bfloat16(HUGE_VALF); }
 };
@@ -70,9 +70,9 @@ struct ReduceMin<hip_bfloat16> {
 template <>
 struct ReduceMin<__half> {
   __device__ __half operator()(__half a, __half b) {
-    return __half2float(a) < __half2float(b) ? a : b;
+    return static_cast<float>(a) < static_cast<float>(b) ? a : b;
   }
-  __device__ __half init() { return __float2half(HUGE_VALF); }
+  __device__ __half init() { return __half(HUGE_VALF); }
 };
 
 // And/Or only make sense for bool, but we need to handle other types at compile time

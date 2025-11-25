@@ -27,13 +27,13 @@ struct TypeConvert {
 template <>
 struct TypeConvert<hip_bfloat16> {
   __host__ __device__ static hip_bfloat16 from_float(float v) { return hip_bfloat16(v); }
-  __device__ static float to_float(hip_bfloat16 v) { return __bfloat162float(v); }
+  __host__ __device__ static float to_float(hip_bfloat16 v) { return static_cast<float>(v); }
 };
 
 template <>
 struct TypeConvert<__half> {
-  __host__ __device__ static __half from_float(float v) { return __float2half(v); }
-  __device__ static float to_float(__half v) { return __half2float(v); }
+  __host__ __device__ static __half from_float(float v) { return __half(v); }
+  __host__ __device__ static float to_float(__half v) { return static_cast<float>(v); }
 };
 
 // Type mapping from MLX types to HIP types

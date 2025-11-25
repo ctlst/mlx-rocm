@@ -247,16 +247,16 @@ struct Limits<hip_bfloat16> {
 template <>
 struct Limits<__half> {
   static __host__ __device__ __half max() {
-    return __float2half(HUGE_VALF);
+    return __half(HUGE_VALF);
   }
   static __host__ __device__ __half min() {
-    return __float2half(-HUGE_VALF);
+    return __half(-HUGE_VALF);
   }
   static __host__ __device__ __half finite_max() {
-    return __float2half(65504.0f);  // FP16 max finite
+    return __half(65504.0f);  // FP16 max finite
   }
   static __host__ __device__ __half finite_min() {
-    return __float2half(-65504.0f);
+    return __half(-65504.0f);
   }
 };
 

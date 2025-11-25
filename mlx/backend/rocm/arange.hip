@@ -49,8 +49,8 @@ void Arange::eval_gpu(const std::vector<array>& inputs, array& out) {
     T start_val = rocm::TypeConvert<T>::from_float(static_cast<float>(start_));
     T step_val = rocm::TypeConvert<T>::from_float(static_cast<float>(step_));
     
-    hipLaunchKernel(
-        HIP_KERNEL_NAME(rocm::arange_kernel<T>),
+    hipLaunchKernelGGL(
+        (rocm::arange_kernel<T>),
         dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
         rocm::gpu_ptr<T>(out),
         start_val,
