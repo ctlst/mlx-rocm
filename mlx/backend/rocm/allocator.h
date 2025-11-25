@@ -77,7 +77,7 @@ class RocmAllocator : public allocator::Allocator {
       [](HipBuffer* buf) { return buf->size; },
       [](HipBuffer* buf) {
         if (buf->data) {
-          hipFree(buf->data);
+          CHECK_HIP_ERROR(hipFree(buf->data));
         }
         delete buf;
       }};
