@@ -272,9 +272,12 @@ void binary_op_gpu(
     array& out,
     const char* op,
     const Stream& s) {
+  auto& a = inputs[0];
+  auto& b = inputs[1];
+  auto bopt = get_binary_op_type(a, b);
   auto& encoder = rocm::get_command_encoder(s);
-  set_binary_output_data(
-      inputs, out, [&](auto n) { return rocm::malloc_async(n, encoder); });
+  set_binary_op_output_data(
+      a, b, out, bopt, [&](auto n) { return rocm::malloc_async(n, encoder); });
   binary_op_gpu_inplace<Op>(inputs, out, op, s);
 }
 
