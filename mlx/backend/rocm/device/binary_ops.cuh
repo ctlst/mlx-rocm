@@ -9,6 +9,19 @@
 
 namespace mlx::core::rocm {
 
+// Helper to detect floating-point-like types (including hip_bfloat16 and __half)
+template <typename T>
+struct is_floating_like : std::is_floating_point<T> {};
+
+template <>
+struct is_floating_like<hip_bfloat16> : std::true_type {};
+
+template <>
+struct is_floating_like<__half> : std::true_type {};
+
+template <typename T>
+inline constexpr bool is_floating_like_v = is_floating_like<T>::value;
+
 // Helper to promote types for binary operations
 // Priority: double > float > hip_bfloat16/__half > int64 > int32 > smaller ints > bool
 template <typename T, typename U>
@@ -71,7 +84,7 @@ struct Remainder {
     if constexpr (std::is_integral_v<R>) {
       return static_cast<R>(a) % static_cast<R>(b);
     } else {
-      return fmod(static_cast<double>(a), static_cast<double>(b));
+      return static_cast<R>(fmod(static_cast<double>(a), static_cast<double>(b)));
     }
   }
 };
@@ -80,8 +93,8 @@ struct Maximum {
   template <typename T, typename U>
   __device__ common_type_t<T, U> operator()(T a, U b) {
     using R = common_type_t<T, U>;
-    if constexpr (std::is_floating_point_v<R>) {
-      return fmax(static_cast<double>(a), static_cast<double>(b));
+    if constexpr (is_floating_like_v<R>) {
+      return static_cast<R>(fmax(static_cast<double>(a), static_cast<double>(b)));
     } else {
       return a > b ? static_cast<R>(a) : static_cast<R>(b);
     }
@@ -92,8 +105,8 @@ struct Minimum {
   template <typename T, typename U>
   __device__ common_type_t<T, U> operator()(T a, U b) {
     using R = common_type_t<T, U>;
-    if constexpr (std::is_floating_point_v<R>) {
-      return fmin(static_cast<double>(a), static_cast<double>(b));
+    if constexpr (is_floating_like_v<R>) {
+      return static_cast<R>(fmin(static_cast<double>(a), static_cast<double>(b)));
     } else {
       return a < b ? static_cast<R>(a) : static_cast<R>(b);
     }
@@ -103,7 +116,8 @@ struct Minimum {
 struct Power {
   template <typename T, typename U>
   __device__ common_type_t<T, U> operator()(T a, U b) {
-    return pow(static_cast<double>(a), static_cast<double>(b));
+    using R = common_type_t<T, U>;
+    return static_cast<R>(pow(static_cast<double>(a), static_cast<double>(b)));
   }
 };
 
@@ -206,7 +220,8 @@ struct RightShift {
 struct ArcTan2 {
   template <typename T, typename U>
   __device__ common_type_t<T, U> operator()(T a, U b) {
-    return atan2(static_cast<double>(a), static_cast<double>(b));
+    using R = common_type_t<T, U>;
+    return static_cast<R>(atan2(static_cast<double>(a), static_cast<double>(b)));
   }
 };
 
