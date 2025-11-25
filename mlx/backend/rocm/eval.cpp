@@ -7,7 +7,15 @@
 #include "mlx/primitives.h"
 #include "mlx/scheduler.h"
 
+// roctracer is optional - only used for profiling markers
+#if __has_include(<roctracer/roctx.h>)
 #include <roctracer/roctx.h>
+#define MLX_HAS_ROCTX 1
+#else
+#define MLX_HAS_ROCTX 0
+#define roctxRangePush(x) ((void)0)
+#define roctxRangePop() ((void)0)
+#endif
 
 namespace mlx::core::gpu {
 
