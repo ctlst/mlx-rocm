@@ -52,7 +52,7 @@ void Arange::eval_gpu(const std::vector<array>& inputs, array& out) {
     // Store all arguments in local variables so we can take their addresses
     auto* out_ptr = rocm::gpu_ptr<T>(out);
     rocm::rocm_launch_kernel(
-        HIP_KERNEL_NAME(rocm::arange_kernel<T>),
+        rocm::arange_kernel<T>,
         dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
         out_ptr, start_val, step_val, size);
   });

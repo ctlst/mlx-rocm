@@ -31,7 +31,7 @@ void row_reduce(
       int64_t out_size_val = out_size;
       auto op_val = op;
       rocm::rocm_launch_kernel(
-          HIP_KERNEL_NAME(row_reduce_kernel<T, decltype(op), BLOCK_SIZE>),
+          row_reduce_kernel<T, decltype(op), BLOCK_SIZE>,
           dim3(num_blocks), dim3(BLOCK_SIZE), 0, encoder.stream(),
           in_ptr, out_ptr, red_size, out_size_val, op_val);
     });

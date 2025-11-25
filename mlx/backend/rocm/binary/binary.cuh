@@ -174,7 +174,7 @@ void binary_op_gpu_inplace(
               auto* out_ptr = rocm::gpu_ptr<OutT>(out);
               int64_t size_val = static_cast<int64_t>(size);
               rocm::rocm_launch_kernel(
-                  HIP_KERNEL_NAME(rocm::binary_v<Op, InA, InB, OutT, int64_t, N_READS>),
+                  rocm::binary_v<Op, InA, InB, OutT, int64_t, N_READS>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val);
             } else {
@@ -183,7 +183,7 @@ void binary_op_gpu_inplace(
               auto* out_ptr = rocm::gpu_ptr<OutT>(out);
               uint32_t size_val = static_cast<uint32_t>(size);
               rocm::rocm_launch_kernel(
-                  HIP_KERNEL_NAME(rocm::binary_v<Op, InA, InB, OutT, uint32_t, N_READS>),
+                  rocm::binary_v<Op, InA, InB, OutT, uint32_t, N_READS>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val);
             }
@@ -195,7 +195,7 @@ void binary_op_gpu_inplace(
               auto* out_ptr = rocm::gpu_ptr<OutT>(out);
               int64_t size_val = static_cast<int64_t>(size);
               rocm::rocm_launch_kernel(
-                  HIP_KERNEL_NAME(rocm::binary_sv<Op, InA, InB, OutT, int64_t, N_READS>),
+                  rocm::binary_sv<Op, InA, InB, OutT, int64_t, N_READS>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val);
             } else {
@@ -204,7 +204,7 @@ void binary_op_gpu_inplace(
               auto* out_ptr = rocm::gpu_ptr<OutT>(out);
               uint32_t size_val = static_cast<uint32_t>(size);
               rocm::rocm_launch_kernel(
-                  HIP_KERNEL_NAME(rocm::binary_sv<Op, InA, InB, OutT, uint32_t, N_READS>),
+                  rocm::binary_sv<Op, InA, InB, OutT, uint32_t, N_READS>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val);
             }
@@ -216,7 +216,7 @@ void binary_op_gpu_inplace(
               auto* out_ptr = rocm::gpu_ptr<OutT>(out);
               int64_t size_val = static_cast<int64_t>(size);
               rocm::rocm_launch_kernel(
-                  HIP_KERNEL_NAME(rocm::binary_vs<Op, InA, InB, OutT, int64_t, N_READS>),
+                  rocm::binary_vs<Op, InA, InB, OutT, int64_t, N_READS>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val);
             } else {
@@ -225,7 +225,7 @@ void binary_op_gpu_inplace(
               auto* out_ptr = rocm::gpu_ptr<OutT>(out);
               uint32_t size_val = static_cast<uint32_t>(size);
               rocm::rocm_launch_kernel(
-                  HIP_KERNEL_NAME(rocm::binary_vs<Op, InA, InB, OutT, uint32_t, N_READS>),
+                  rocm::binary_vs<Op, InA, InB, OutT, uint32_t, N_READS>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val);
             }
@@ -249,7 +249,7 @@ void binary_op_gpu_inplace(
               int64_t* b_strides_data = b_strides_param.data;
               int ndim_val = out.ndim();
               rocm::rocm_launch_kernel(
-                  HIP_KERNEL_NAME(rocm::binary_g<Op, InA, InB, OutT, int64_t>),
+                  rocm::binary_g<Op, InA, InB, OutT, int64_t>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val, shape_data, a_strides_data, b_strides_data, ndim_val);
             } else {
@@ -262,7 +262,7 @@ void binary_op_gpu_inplace(
               int64_t* b_strides_data = b_strides_param.data;
               int ndim_val = out.ndim();
               rocm::rocm_launch_kernel(
-                  HIP_KERNEL_NAME(rocm::binary_g<Op, InA, InB, OutT, uint32_t>),
+                  rocm::binary_g<Op, InA, InB, OutT, uint32_t>,
                   dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                   a_ptr, b_ptr, out_ptr, size_val, shape_data, a_strides_data, b_strides_data, ndim_val);
             }

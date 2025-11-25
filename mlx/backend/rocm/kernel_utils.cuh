@@ -86,9 +86,9 @@ inline std::pair<dim3, dim3> get_launch_args(
 }
 
 // Simple kernel launch helper for ROCm 6.x that packs arguments into void** array
-template<typename... Args>
+template<typename KernelFunc, typename... Args>
 inline void rocm_launch_kernel(
-    const void* kernel_func,
+    KernelFunc kernel_func,
     dim3 grid_dim,
     dim3 block_dim,
     size_t shared_mem_bytes,
@@ -96,7 +96,7 @@ inline void rocm_launch_kernel(
     Args&&... args) {
   void* kernel_args[] = {reinterpret_cast<void*>(&args)...};
   CHECK_HIP_ERROR(hipLaunchKernel(
-      kernel_func,
+      reinterpret_cast<const void*>(&kernel_func),
       grid_dim,
       block_dim,
       kernel_args,

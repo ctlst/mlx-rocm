@@ -65,7 +65,7 @@ void Select::eval_gpu(const std::vector<array>& inputs, array& out) {
       auto* out_ptr = rocm::gpu_ptr<T>(out);
       int64_t size_val = static_cast<int64_t>(size);
       rocm::rocm_launch_kernel(
-          HIP_KERNEL_NAME(rocm::select_kernel<T, int64_t>),
+          rocm::select_kernel<T, int64_t>,
           dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
           cond_ptr, a_ptr, b_ptr, out_ptr, size_val);
     } else {
@@ -76,7 +76,7 @@ void Select::eval_gpu(const std::vector<array>& inputs, array& out) {
       auto* out_ptr = rocm::gpu_ptr<T>(out);
       uint32_t size_val = static_cast<uint32_t>(size);
       rocm::rocm_launch_kernel(
-          HIP_KERNEL_NAME(rocm::select_kernel<T, uint32_t>),
+          rocm::select_kernel<T, uint32_t>,
           dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
           cond_ptr, a_ptr, b_ptr, out_ptr, size_val);
     }

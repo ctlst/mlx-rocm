@@ -29,7 +29,7 @@ void all_reduce(
       size_t init_size = static_cast<size_t>(1);
       auto op_init = op;
       rocm::rocm_launch_kernel(
-          HIP_KERNEL_NAME(init_reduce_kernel<T, decltype(op)>),
+          init_reduce_kernel<T, decltype(op)>,
           dim3(1), dim3(1), 0, encoder.stream(),
           out_ptr_init, init_size, op_init);
 
@@ -39,7 +39,7 @@ void all_reduce(
       size_t reduce_size = size;
       auto op_reduce = op;
       rocm::rocm_launch_kernel(
-          HIP_KERNEL_NAME(all_reduce_kernel<T, decltype(op), BLOCK_SIZE>),
+          all_reduce_kernel<T, decltype(op), BLOCK_SIZE>,
           dim3(num_blocks), dim3(BLOCK_SIZE), 0, encoder.stream(),
           in_ptr, out_ptr, reduce_size, op_reduce);
     });

@@ -25,7 +25,7 @@ void init_reduce(
       size_t size_val = size;
       auto op_val = op;
       rocm::rocm_launch_kernel(
-          HIP_KERNEL_NAME(init_reduce_kernel<T, decltype(op)>),
+          init_reduce_kernel<T, decltype(op)>,
           dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
           out_ptr, size_val, op_val);
     });

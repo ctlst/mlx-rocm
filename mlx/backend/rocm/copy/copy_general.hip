@@ -49,7 +49,7 @@ void copy_general_impl(
     int64_t* src_strides_data = src_strides_param.data;
     int64_t* dst_strides_data = dst_strides_param.data;
     rocm::rocm_launch_kernel(
-        HIP_KERNEL_NAME(copy_general_kernel<HipSrcT, HipDstT, int64_t>),
+        copy_general_kernel<HipSrcT, HipDstT, int64_t>,
         dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
         src_ptr, dst_ptr, size_val, shape_data, src_strides_data, dst_strides_data, ndim);
   } else {
@@ -61,7 +61,7 @@ void copy_general_impl(
     int64_t* src_strides_data = src_strides_param.data;
     int64_t* dst_strides_data = dst_strides_param.data;
     rocm::rocm_launch_kernel(
-        HIP_KERNEL_NAME(copy_general_kernel<HipSrcT, HipDstT, uint32_t>),
+        copy_general_kernel<HipSrcT, HipDstT, uint32_t>,
         dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
         src_ptr, dst_ptr, size_val, shape_data, src_strides_data, dst_strides_data, ndim);
   }

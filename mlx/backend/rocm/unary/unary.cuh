@@ -148,7 +148,7 @@ void unary_op_gpu_inplace(
             auto* out_ptr = rocm::gpu_ptr<OutType>(out);
             int64_t size_val = static_cast<int64_t>(size);
             rocm::rocm_launch_kernel(
-                HIP_KERNEL_NAME(rocm::unary_v<Op, InType, OutType, int64_t, N_READS>),
+                rocm::unary_v<Op, InType, OutType, int64_t, N_READS>,
                 dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                 in_ptr, out_ptr, size_val);
           } else {
@@ -156,7 +156,7 @@ void unary_op_gpu_inplace(
             auto* out_ptr = rocm::gpu_ptr<OutType>(out);
             uint32_t size_val = static_cast<uint32_t>(size);
             rocm::rocm_launch_kernel(
-                HIP_KERNEL_NAME(rocm::unary_v<Op, InType, OutType, uint32_t, N_READS>),
+                rocm::unary_v<Op, InType, OutType, uint32_t, N_READS>,
                 dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
                 in_ptr, out_ptr, size_val);
           }
@@ -190,7 +190,7 @@ void unary_op_gpu_inplace(
               int32_t* shape_data = shape_param.data;
               int64_t* strides_data = strides_param.data;
               rocm::rocm_launch_kernel(
-                  HIP_KERNEL_NAME(rocm::unary_g<Op, InType, OutType, int64_t, 4>),
+                  rocm::unary_g<Op, InType, OutType, int64_t, 4>,
                   dim3(num_blocks_x, num_blocks_y), block_dims, 0, encoder.stream(),
                   in_ptr, out_ptr, rest_val, shape_data, strides_data, ndim);
             } else {
@@ -200,7 +200,7 @@ void unary_op_gpu_inplace(
               int32_t* shape_data = shape_param.data;
               int64_t* strides_data = strides_param.data;
               rocm::rocm_launch_kernel(
-                  HIP_KERNEL_NAME(rocm::unary_g<Op, InType, OutType, int32_t, 4>),
+                  rocm::unary_g<Op, InType, OutType, int32_t, 4>,
                   dim3(num_blocks_x, num_blocks_y), block_dims, 0, encoder.stream(),
                   in_ptr, out_ptr, rest_val, shape_data, strides_data, ndim);
             }
@@ -212,7 +212,7 @@ void unary_op_gpu_inplace(
               int32_t* shape_data = shape_param.data;
               int64_t* strides_data = strides_param.data;
               rocm::rocm_launch_kernel(
-                  HIP_KERNEL_NAME(rocm::unary_g<Op, InType, OutType, int64_t, 1>),
+                  rocm::unary_g<Op, InType, OutType, int64_t, 1>,
                   dim3(num_blocks_x, num_blocks_y), block_dims, 0, encoder.stream(),
                   in_ptr, out_ptr, rest_val, shape_data, strides_data, ndim);
             } else {
@@ -222,7 +222,7 @@ void unary_op_gpu_inplace(
               int32_t* shape_data = shape_param.data;
               int64_t* strides_data = strides_param.data;
               rocm::rocm_launch_kernel(
-                  HIP_KERNEL_NAME(rocm::unary_g<Op, InType, OutType, int32_t, 1>),
+                  rocm::unary_g<Op, InType, OutType, int32_t, 1>,
                   dim3(num_blocks_x, num_blocks_y), block_dims, 0, encoder.stream(),
                   in_ptr, out_ptr, rest_val, shape_data, strides_data, ndim);
             }
