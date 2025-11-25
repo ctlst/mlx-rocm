@@ -12,23 +12,45 @@
 
 namespace mlx::core::rocm {
 
+// Use TypeConvert from kernel_utils.cuh for type conversions
+// Alias for backwards compatibility within reduce code
+template <typename T>
+using ReduceTraits = TypeConvert<T>;
+
 // Reduce operation types
 template <typename T>
 struct ReduceAdd {
   __device__ T operator()(T a, T b) { return a + b; }
-  __device__ T init() { return T(0); }
+  __device__ T init() { return ReduceTraits<T>::from_float(0.0f); }
 };
 
 template <typename T>
 struct ReduceMul {
   __device__ T operator()(T a, T b) { return a * b; }
-  __device__ T init() { return T(1); }
+  __device__ T init() { return ReduceTraits<T>::from_float(1.0f); }
 };
 
+// Specialization for hip_bfloat16 comparison (convert to float for comparison)
 template <typename T>
 struct ReduceMax {
   __device__ T operator()(T a, T b) { return a > b ? a : b; }
   __device__ T init() { return Limits<T>::min(); }
+};
+
+template <>
+struct ReduceMax<hip_bfloat16> {
+  __device__ hip_bfloat16 operator()(hip_bfloat16 a, hip_bfloat16 b) {
+    return __bfloat162float(a) > __bfloat162float(b) ? a : b;
+  }
+  __device__ hip_bfloat16 init() { return hip_bfloat16(-HUGE_VALF); }
+};
+
+template <>
+struct ReduceMax<__half> {
+  __device__ __half operator()(__half a, __half b) {
+    return __half2float(a) > __half2float(b) ? a : b;
+  }
+  __device__ __half init() { return __float2half(-HUGE_VALF); }
 };
 
 template <typename T>
@@ -37,17 +59,124 @@ struct ReduceMin {
   __device__ T init() { return Limits<T>::max(); }
 };
 
+template <>
+struct ReduceMin<hip_bfloat16> {
+  __device__ hip_bfloat16 operator()(hip_bfloat16 a, hip_bfloat16 b) {
+    return __bfloat162float(a) < __bfloat162float(b) ? a : b;
+  }
+  __device__ hip_bfloat16 init() { return hip_bfloat16(HUGE_VALF); }
+};
+
+template <>
+struct ReduceMin<__half> {
+  __device__ __half operator()(__half a, __half b) {
+    return __half2float(a) < __half2float(b) ? a : b;
+  }
+  __device__ __half init() { return __float2half(HUGE_VALF); }
+};
+
+// And/Or only make sense for bool, but we need to handle other types at compile time
 template <typename T>
 struct ReduceAnd {
-  __device__ T operator()(T a, T b) { return a && b; }
-  __device__ T init() { return T(true); }
+  __device__ T operator()(T a, T b) { 
+    return ReduceTraits<T>::from_float(
+        (ReduceTraits<T>::to_float(a) != 0.0f && ReduceTraits<T>::to_float(b) != 0.0f) ? 1.0f : 0.0f);
+  }
+  __device__ T init() { return ReduceTraits<T>::from_float(1.0f); }
+};
+
+template <>
+struct ReduceAnd<bool> {
+  __device__ bool operator()(bool a, bool b) { return a && b; }
+  __device__ bool init() { return true; }
 };
 
 template <typename T>
 struct ReduceOr {
-  __device__ T operator()(T a, T b) { return a || b; }
-  __device__ T init() { return T(false); }
+  __device__ T operator()(T a, T b) {
+    return ReduceTraits<T>::from_float(
+        (ReduceTraits<T>::to_float(a) != 0.0f || ReduceTraits<T>::to_float(b) != 0.0f) ? 1.0f : 0.0f);
+  }
+  __device__ T init() { return ReduceTraits<T>::from_float(0.0f); }
 };
+
+template <>
+struct ReduceOr<bool> {
+  __device__ bool operator()(bool a, bool b) { return a || b; }
+  __device__ bool init() { return false; }
+};
+
+// Custom atomic operations for types without native atomicAdd support
+// Uses compare-and-swap for generic implementation
+
+template <typename T, typename Op>
+__device__ void atomic_reduce(T* addr, T val, Op op) {
+  // For 32-bit types, use atomicCAS
+  static_assert(sizeof(T) == 4 || sizeof(T) == 8 || sizeof(T) == 2,
+                "atomic_reduce requires 2, 4, or 8 byte types");
+  
+  if constexpr (sizeof(T) == 4) {
+    unsigned int* addr_as_uint = reinterpret_cast<unsigned int*>(addr);
+    unsigned int old = *addr_as_uint;
+    unsigned int assumed;
+    do {
+      assumed = old;
+      T old_val;
+      memcpy(&old_val, &assumed, sizeof(T));
+      T new_val = op(old_val, val);
+      unsigned int new_uint;
+      memcpy(&new_uint, &new_val, sizeof(T));
+      old = atomicCAS(addr_as_uint, assumed, new_uint);
+    } while (assumed != old);
+  } else if constexpr (sizeof(T) == 8) {
+    unsigned long long* addr_as_ull = reinterpret_cast<unsigned long long*>(addr);
+    unsigned long long old = *addr_as_ull;
+    unsigned long long assumed;
+    do {
+      assumed = old;
+      T old_val;
+      memcpy(&old_val, &assumed, sizeof(T));
+      T new_val = op(old_val, val);
+      unsigned long long new_ull;
+      memcpy(&new_ull, &new_val, sizeof(T));
+      old = atomicCAS(addr_as_ull, assumed, new_ull);
+    } while (assumed != old);
+  } else if constexpr (sizeof(T) == 2) {
+    // For 16-bit types, need to handle alignment carefully
+    // Use 32-bit CAS on aligned address
+    size_t addr_int = reinterpret_cast<size_t>(addr);
+    bool is_high = (addr_int & 2) != 0;
+    unsigned int* addr32 = reinterpret_cast<unsigned int*>(addr_int & ~3ULL);
+    unsigned int old = *addr32;
+    unsigned int assumed;
+    do {
+      assumed = old;
+      unsigned short old_val16 = is_high ? (assumed >> 16) : (assumed & 0xFFFF);
+      T old_val;
+      memcpy(&old_val, &old_val16, sizeof(T));
+      T new_val = op(old_val, val);
+      unsigned short new_val16;
+      memcpy(&new_val16, &new_val, sizeof(T));
+      unsigned int new32 = is_high ? 
+          ((assumed & 0xFFFF) | (static_cast<unsigned int>(new_val16) << 16)) :
+          ((assumed & 0xFFFF0000) | new_val16);
+      old = atomicCAS(addr32, assumed, new32);
+    } while (assumed != old);
+  }
+}
+
+// Trait to determine if native atomicAdd is available
+template <typename T>
+struct has_native_atomic_add : std::false_type {};
+
+template <>
+struct has_native_atomic_add<float> : std::true_type {};
+template <>
+struct has_native_atomic_add<int32_t> : std::true_type {};
+template <>
+struct has_native_atomic_add<uint32_t> : std::true_type {};
+template <>
+struct has_native_atomic_add<unsigned long long> : std::true_type {};
 
 // Warp-level reduction
 template <typename T, typename Op>
@@ -104,7 +233,12 @@ __global__ void all_reduce_kernel(
   acc = block_reduce<T, Op, BLOCK_SIZE>(acc, op, shared);
   
   if (threadIdx.x == 0) {
-    atomicAdd(out, acc);
+    // Use native atomicAdd for supported types, custom CAS-based for others
+    if constexpr (has_native_atomic_add<T>::value) {
+      atomicAdd(out, acc);
+    } else {
+      atomic_reduce(out, acc, op);
+    }
   }
 }
 

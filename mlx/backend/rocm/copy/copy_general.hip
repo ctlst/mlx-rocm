@@ -74,8 +74,9 @@ void copy_general(
     const mlx::core::Strides& dst_strides,
     int64_t src_offset,
     int64_t dst_offset) {
-  dispatch_all_types(src.dtype(), [&](auto src_type_tag) {
-    dispatch_all_types(dst.dtype(), [&](auto dst_type_tag) {
+  // Use ROCm-specific dispatch that excludes complex64
+  dispatch_all_types_rocm(src.dtype(), [&](auto src_type_tag) {
+    dispatch_all_types_rocm(dst.dtype(), [&](auto dst_type_tag) {
       using SrcT = typename decltype(src_type_tag)::type;
       using DstT = typename decltype(dst_type_tag)::type;
       copy_general_impl<SrcT, DstT>(

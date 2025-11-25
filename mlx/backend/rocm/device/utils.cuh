@@ -228,6 +228,134 @@ struct Limits<bool> {
   }
 };
 
+template <>
+struct Limits<hip_bfloat16> {
+  static __host__ __device__ hip_bfloat16 max() {
+    return hip_bfloat16(HUGE_VALF);
+  }
+  static __host__ __device__ hip_bfloat16 min() {
+    return hip_bfloat16(-HUGE_VALF);
+  }
+  static __host__ __device__ hip_bfloat16 finite_max() {
+    return hip_bfloat16(3.38953139e+38f);  // BF16 max finite
+  }
+  static __host__ __device__ hip_bfloat16 finite_min() {
+    return hip_bfloat16(-3.38953139e+38f);
+  }
+};
+
+template <>
+struct Limits<__half> {
+  static __host__ __device__ __half max() {
+    return __float2half(HUGE_VALF);
+  }
+  static __host__ __device__ __half min() {
+    return __float2half(-HUGE_VALF);
+  }
+  static __host__ __device__ __half finite_max() {
+    return __float2half(65504.0f);  // FP16 max finite
+  }
+  static __host__ __device__ __half finite_min() {
+    return __float2half(-65504.0f);
+  }
+};
+
+template <>
+struct Limits<int8_t> {
+  static constexpr __host__ __device__ int8_t max() {
+    return INT8_MAX;
+  }
+  static constexpr __host__ __device__ int8_t min() {
+    return INT8_MIN;
+  }
+  static constexpr __host__ __device__ int8_t finite_max() {
+    return INT8_MAX;
+  }
+  static constexpr __host__ __device__ int8_t finite_min() {
+    return INT8_MIN;
+  }
+};
+
+template <>
+struct Limits<int16_t> {
+  static constexpr __host__ __device__ int16_t max() {
+    return INT16_MAX;
+  }
+  static constexpr __host__ __device__ int16_t min() {
+    return INT16_MIN;
+  }
+  static constexpr __host__ __device__ int16_t finite_max() {
+    return INT16_MAX;
+  }
+  static constexpr __host__ __device__ int16_t finite_min() {
+    return INT16_MIN;
+  }
+};
+
+template <>
+struct Limits<uint8_t> {
+  static constexpr __host__ __device__ uint8_t max() {
+    return UINT8_MAX;
+  }
+  static constexpr __host__ __device__ uint8_t min() {
+    return 0;
+  }
+  static constexpr __host__ __device__ uint8_t finite_max() {
+    return UINT8_MAX;
+  }
+  static constexpr __host__ __device__ uint8_t finite_min() {
+    return 0;
+  }
+};
+
+template <>
+struct Limits<uint16_t> {
+  static constexpr __host__ __device__ uint16_t max() {
+    return UINT16_MAX;
+  }
+  static constexpr __host__ __device__ uint16_t min() {
+    return 0;
+  }
+  static constexpr __host__ __device__ uint16_t finite_max() {
+    return UINT16_MAX;
+  }
+  static constexpr __host__ __device__ uint16_t finite_min() {
+    return 0;
+  }
+};
+
+template <>
+struct Limits<uint32_t> {
+  static constexpr __host__ __device__ uint32_t max() {
+    return UINT32_MAX;
+  }
+  static constexpr __host__ __device__ uint32_t min() {
+    return 0;
+  }
+  static constexpr __host__ __device__ uint32_t finite_max() {
+    return UINT32_MAX;
+  }
+  static constexpr __host__ __device__ uint32_t finite_min() {
+    return 0;
+  }
+};
+
+template <>
+struct Limits<uint64_t> {
+  static constexpr __host__ __device__ uint64_t max() {
+    return UINT64_MAX;
+  }
+  static constexpr __host__ __device__ uint64_t min() {
+    return 0;
+  }
+  static constexpr __host__ __device__ uint64_t finite_max() {
+    return UINT64_MAX;
+  }
+  static constexpr __host__ __device__ uint64_t finite_min() {
+    return 0;
+  }
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Indexing utils
 ///////////////////////////////////////////////////////////////////////////////

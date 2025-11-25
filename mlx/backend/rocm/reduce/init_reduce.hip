@@ -17,11 +17,12 @@ void init_reduce(
   int block_size = 256;
   int num_blocks = (size + block_size - 1) / block_size;
   
-  dispatch_all_types(out.dtype(), [&](auto type_tag) {
+  // Use ROCm-specific dispatch that excludes complex64
+  dispatch_numeric_types_rocm(out.dtype(), [&](auto type_tag) {
     using T = hip_type_t<typename decltype(type_tag)::type>;
     dispatch_reduce_op<T>(type, [&](auto op) {
-      hipLaunchKernelGGL(
-          init_reduce_kernel<T, decltype(op)>,
+      hipLaunchKernel(
+          HIP_KERNEL_NAME(init_reduce_kernel<T, decltype(op)>),
           dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
           gpu_ptr<T>(out),
           size,

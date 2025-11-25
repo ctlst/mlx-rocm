@@ -53,7 +53,8 @@ void Select::eval_gpu(const std::vector<array>& inputs, array& out) {
   int block_size = 256;
   int num_blocks = (size + block_size - 1) / block_size;
   
-  dispatch_all_types(out.dtype(), [&](auto type_tag) {
+  // Use ROCm-specific dispatch that excludes complex64
+  rocm::dispatch_all_types_rocm(out.dtype(), [&](auto type_tag) {
     using T = rocm::hip_type_t<typename decltype(type_tag)::type>;
     
     if (size > UINT32_MAX) {

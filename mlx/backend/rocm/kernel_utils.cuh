@@ -17,6 +17,25 @@ namespace mlx::core::rocm {
 template <typename T>
 using TypeTag = type_identity<T>;
 
+// Helper traits for type conversions (needed for hip_bfloat16 and __half)
+template <typename T>
+struct TypeConvert {
+  __host__ __device__ static T from_float(float v) { return static_cast<T>(v); }
+  __host__ __device__ static float to_float(T v) { return static_cast<float>(v); }
+};
+
+template <>
+struct TypeConvert<hip_bfloat16> {
+  __host__ __device__ static hip_bfloat16 from_float(float v) { return hip_bfloat16(v); }
+  __device__ static float to_float(hip_bfloat16 v) { return __bfloat162float(v); }
+};
+
+template <>
+struct TypeConvert<__half> {
+  __host__ __device__ static __half from_float(float v) { return __float2half(v); }
+  __device__ static float to_float(__half v) { return __half2float(v); }
+};
+
 // Type mapping from MLX types to HIP types
 template <typename T>
 struct hip_type {
@@ -68,6 +87,104 @@ inline std::pair<dim3, dim3> get_launch_args(
 
 // Note: dispatch_all_types is provided by mlx/dtype_utils.h
 // Use TypeTag<T> (alias for type_identity<T>) with lambdas
+
+// Dispatch helper for ROCm that excludes complex64 (not device-compatible)
+// This is safe for LLM/GGUF inference which doesn't use complex operations
+template <typename F>
+void dispatch_all_types_rocm(Dtype dt, F&& f) {
+  switch (dt) {
+    case bool_:
+      f(type_identity<bool>{});
+      break;
+    case int8:
+      f(type_identity<int8_t>{});
+      break;
+    case int16:
+      f(type_identity<int16_t>{});
+      break;
+    case int32:
+      f(type_identity<int32_t>{});
+      break;
+    case int64:
+      f(type_identity<int64_t>{});
+      break;
+    case uint8:
+      f(type_identity<uint8_t>{});
+      break;
+    case uint16:
+      f(type_identity<uint16_t>{});
+      break;
+    case uint32:
+      f(type_identity<uint32_t>{});
+      break;
+    case uint64:
+      f(type_identity<uint64_t>{});
+      break;
+    case float16:
+      f(type_identity<float16_t>{});
+      break;
+    case bfloat16:
+      f(type_identity<bfloat16_t>{});
+      break;
+    case float32:
+      f(type_identity<float>{});
+      break;
+    case float64:
+      f(type_identity<double>{});
+      break;
+    case complex64:
+      throw std::runtime_error(
+          "[ROCm] complex64 operations not supported on GPU, use CPU fallback");
+    default:
+      throw std::runtime_error("[ROCm] Unknown dtype");
+  }
+}
+
+// Dispatch for float/int types (no bool, no complex) - for reduce ops
+template <typename F>
+void dispatch_numeric_types_rocm(Dtype dt, F&& f) {
+  switch (dt) {
+    case int8:
+      f(type_identity<int8_t>{});
+      break;
+    case int16:
+      f(type_identity<int16_t>{});
+      break;
+    case int32:
+      f(type_identity<int32_t>{});
+      break;
+    case int64:
+      f(type_identity<int64_t>{});
+      break;
+    case uint8:
+      f(type_identity<uint8_t>{});
+      break;
+    case uint16:
+      f(type_identity<uint16_t>{});
+      break;
+    case uint32:
+      f(type_identity<uint32_t>{});
+      break;
+    case uint64:
+      f(type_identity<uint64_t>{});
+      break;
+    case float16:
+      f(type_identity<float16_t>{});
+      break;
+    case bfloat16:
+      f(type_identity<bfloat16_t>{});
+      break;
+    case float32:
+      f(type_identity<float>{});
+      break;
+    case float64:
+      f(type_identity<double>{});
+      break;
+    default:
+      throw std::runtime_error(
+          "[ROCm] Only numeric types (int/float) supported for this operation");
+  }
+}
 
 // Dispatch helper for bool
 template <typename F>

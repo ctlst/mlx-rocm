@@ -86,3 +86,7 @@ build/
 
 # Jetbrains
 .cache
+
+# ROCm build notes
+ROCM_BUILD_STATUS.md
+build_errors.txt

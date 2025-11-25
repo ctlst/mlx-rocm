@@ -148,9 +148,10 @@ void binary_op_gpu_inplace(
   auto bopt = get_binary_op_type(a, b);
   bool large = out.size() > UINT32_MAX;
   
-  dispatch_all_types(a.dtype(), [&](auto a_type_tag) {
-    dispatch_all_types(b.dtype(), [&](auto b_type_tag) {
-      dispatch_all_types(out.dtype(), [&](auto out_type_tag) {
+  // Use ROCm-specific dispatch that excludes complex64
+  rocm::dispatch_all_types_rocm(a.dtype(), [&](auto a_type_tag) {
+    rocm::dispatch_all_types_rocm(b.dtype(), [&](auto b_type_tag) {
+      rocm::dispatch_all_types_rocm(out.dtype(), [&](auto out_type_tag) {
         using A_T = typename decltype(a_type_tag)::type;
         using B_T = typename decltype(b_type_tag)::type;
         using Out_T = typename decltype(out_type_tag)::type;

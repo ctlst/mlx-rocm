@@ -44,7 +44,8 @@ void copy_contiguous(
     CommandEncoder& encoder,
     const array& src,
     array& dst) {
-  dispatch_all_types(src.dtype(), [&](auto type_tag) {
+  // Use ROCm-specific dispatch that excludes complex64
+  dispatch_all_types_rocm(src.dtype(), [&](auto type_tag) {
     using T = typename decltype(type_tag)::type;
     copy_contiguous_impl<T>(encoder, src, dst);
   });

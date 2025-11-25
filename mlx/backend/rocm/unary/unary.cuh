@@ -128,8 +128,9 @@ void unary_op_gpu_inplace(
   encoder.set_input_array(in);
   encoder.set_output_array(out);
   
-  dispatch_all_types(in.dtype(), [&](auto in_type_tag) {
-    dispatch_all_types(out.dtype(), [&](auto out_type_tag) {
+  // Use ROCm-specific dispatch that excludes complex64
+  rocm::dispatch_all_types_rocm(in.dtype(), [&](auto in_type_tag) {
+    rocm::dispatch_all_types_rocm(out.dtype(), [&](auto out_type_tag) {
       using CTYPE_IN = typename decltype(in_type_tag)::type;
       using CTYPE_OUT = typename decltype(out_type_tag)::type;
       if constexpr (rocm::supports_unary_op<Op, CTYPE_IN, CTYPE_OUT>()) {

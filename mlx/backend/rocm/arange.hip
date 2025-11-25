@@ -43,13 +43,14 @@ void Arange::eval_gpu(const std::vector<array>& inputs, array& out) {
   int block_size = 256;
   int num_blocks = (size + block_size - 1) / block_size;
   
-  dispatch_all_types(out.dtype(), [&](auto type_tag) {
+  // Use ROCm-specific dispatch that excludes complex64
+  rocm::dispatch_all_types_rocm(out.dtype(), [&](auto type_tag) {
     using T = rocm::hip_type_t<typename decltype(type_tag)::type>;
-    T start_val = static_cast<T>(start_);
-    T step_val = static_cast<T>(step_);
+    T start_val = rocm::TypeConvert<T>::from_float(static_cast<float>(start_));
+    T step_val = rocm::TypeConvert<T>::from_float(static_cast<float>(step_));
     
-    hipLaunchKernelGGL(
-        rocm::arange_kernel<T>,
+    hipLaunchKernel(
+        HIP_KERNEL_NAME(rocm::arange_kernel<T>),
         dim3(num_blocks), dim3(block_size), 0, encoder.stream(),
         rocm::gpu_ptr<T>(out),
         start_val,
