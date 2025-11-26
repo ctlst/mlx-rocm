@@ -14,6 +14,11 @@
 // roctracer is optional - only used for profiling markers
 #if __has_include(<roctracer/roctx.h>)
 #include <roctracer/roctx.h>
+#define MLX_HAS_ROCTX 1
+#else
+#define MLX_HAS_ROCTX 0
+#define roctxRangePush(x) ((void)0)
+#define roctxRangePop() ((void)0)
 #endif
 #endif
 
@@ -21,7 +26,7 @@
 
 #if defined(MLX_USE_CUDA)
 #define MLX_PROFILER_RANGE(message) nvtx3::scoped_range r(message)
-#elif defined(MLX_USE_ROCM)
+#elif defined(MLX_USE_ROCM) && MLX_HAS_ROCTX
 #define MLX_PROFILER_RANGE(message) roctxRangePush(message); struct RoctxRangeGuard { ~RoctxRangeGuard() { roctxRangePop(); } } _roctx_guard
 #else
 #define MLX_PROFILER_RANGE(message)
