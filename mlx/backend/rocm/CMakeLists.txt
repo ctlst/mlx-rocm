@@ -62,6 +62,15 @@ target_link_libraries(mlx PRIVATE roc::rocblas)
 # Use hipRTC for JIT compilation
 target_link_libraries(mlx PRIVATE hiprtc::hiprtc)
 
+# Link roctracer if available (for profiling)
+find_library(ROCTX_LIBRARY NAMES roctx64 PATHS ${ROCM_PATH}/lib /opt/rocm/lib)
+if(ROCTX_LIBRARY)
+  message(STATUS "Found roctracer: ${ROCTX_LIBRARY}")
+  target_link_libraries(mlx PRIVATE ${ROCTX_LIBRARY})
+else()
+  message(STATUS "roctracer not found, profiling markers disabled")
+endif()
+
 # Enable extended lambda for device code
 target_compile_options(mlx PRIVATE $<$<COMPILE_LANGUAGE:HIP>:-fgpu-allow-device-init>)
 

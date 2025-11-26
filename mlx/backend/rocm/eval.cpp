@@ -7,6 +7,10 @@
 #include "mlx/primitives.h"
 #include "mlx/scheduler.h"
 
+#include <hip/hip_runtime.h>
+#include <cstdlib>
+#include <string>
+
 // roctracer is optional - only used for profiling markers
 #if __has_include(<roctracer/roctx.h>)
 #include <roctracer/roctx.h>
@@ -19,13 +23,57 @@
 
 namespace mlx::core::gpu {
 
-bool is_available() {
+namespace {
+
+// Check if HIP is actually available and working
+// This is cached to avoid repeated checks
+bool check_hip_available() {
+  static int result = -1;  // -1 = not checked, 0 = not available, 1 = available
+  if (result >= 0) {
+    return result == 1;
+  }
+  
+  // Check environment variable to force disable GPU
+  if (const char* env = std::getenv("MLX_DISABLE_GPU")) {
+    if (std::string(env) == "1" || std::string(env) == "true") {
+      result = 0;
+      return false;
+    }
+  }
+  
+  // Try to initialize HIP and get device count
+  int device_count = 0;
+  hipError_t err = hipGetDeviceCount(&device_count);
+  
+  if (err != hipSuccess || device_count <= 0) {
+    result = 0;
+    return false;
+  }
+  
+  // Try a simple HIP call to ensure the runtime is actually working
+  err = hipFree(nullptr);
+  if (err != hipSuccess) {
+    result = 0;
+    return false;
+  }
+  
+  result = 1;
   return true;
 }
 
+bool hip_initialized = false;
+
+}  // namespace
+
+bool is_available() {
+  return check_hip_available();
+}
+
 void new_stream(Stream s) {
-  // Force initialization of HIP, so HIP runtime gets destroyed last.
-  hipFree(nullptr);
+  if (!hip_initialized) {
+    // HIP was already validated in is_available(), just mark as initialized
+    hip_initialized = true;
+  }
   // Ensure the static stream objects get created.
   rocm::get_command_encoder(s);
 }
