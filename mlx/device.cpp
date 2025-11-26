@@ -1,6 +1,8 @@
 // Copyright © 2023 Apple Inc.
 
 #include <stdexcept>
+#include <cstdlib>
+#include <string>
 
 #include "mlx/backend/cpu/available.h"
 #include "mlx/backend/gpu/available.h"
@@ -9,7 +11,16 @@
 namespace mlx::core {
 
 Device& mutable_default_device() {
-  static Device default_device{gpu::is_available() ? Device::gpu : Device::cpu};
+  static Device default_device = []() {
+    // Check environment variable first
+    if (const char* env = std::getenv("MLX_DISABLE_GPU")) {
+      if (std::string(env) == "1" || std::string(env) == "true") {
+        return Device::cpu;
+      }
+    }
+    // Otherwise use GPU if available
+    return gpu::is_available() ? Device::gpu : Device::cpu;
+  }();
   return default_device;
 }
 
