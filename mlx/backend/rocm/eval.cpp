@@ -66,6 +66,12 @@ bool hip_initialized = false;
 }  // namespace
 
 bool is_available() {
+  // Check environment variable first
+  if (const char* env = std::getenv("MLX_DISABLE_GPU")) {
+    if (std::string(env) == "1" || std::string(env) == "true") {
+      return false;
+    }
+  }
   return check_hip_available();
 }
 
