@@ -26,7 +26,10 @@ Event::Event(Stream stream) : stream_(stream) {
     delete ec;
   };
   auto* ec = new EventCounter{};
-  hipEventCreate(&ec->hip_event);
+  // Only create HIP event for GPU streams
+  if (stream.device == Device::gpu) {
+    hipEventCreate(&ec->hip_event);
+  }
   event_ = std::shared_ptr<void>(ec, dtor);
 }
 
