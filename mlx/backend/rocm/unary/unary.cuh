@@ -87,7 +87,7 @@ constexpr bool supports_unary_op() {
            !std::is_same_v<In, float16_t> && !std::is_same_v<In, bfloat16_t>;
   }
   if constexpr (std::is_same_v<Op, Ceil> || std::is_same_v<Op, Floor>) {
-    return std::is_same_v<In, Out> && !mlx::core::is_complex_v<In>;
+    return std::is_same_v<In, Out> && !is_complex_v<In>;
   }
   if constexpr (std::is_same_v<Op, ArcCos> || std::is_same_v<Op, ArcSin> ||
       std::is_same_v<Op, ArcTan> || std::is_same_v<Op, Cos> ||
