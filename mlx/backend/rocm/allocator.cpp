@@ -16,10 +16,12 @@ namespace {
 constexpr size_t kPoolSize = 4096;
 constexpr size_t kScalarSize = 16;
 
-// Get system memory info
+// Get system memory info - called lazily
 size_t get_system_memory() {
-  size_t free_mem, total_mem;
-  if (hipMemGetInfo(&free_mem, &total_mem) == hipSuccess) {
+  // Try to query GPU memory, but don't crash if HIP isn't ready
+  size_t free_mem = 0, total_mem = 0;
+  hipError_t err = hipMemGetInfo(&free_mem, &total_mem);
+  if (err == hipSuccess && total_mem > 0) {
     return total_mem;
   }
   // Fallback to 8GB if we can't query
@@ -28,12 +30,29 @@ size_t get_system_memory() {
 
 } // namespace
 
-SmallSizePool::SmallSizePool() {
+SmallSizePool::SmallSizePool() 
+    : buffer_(nullptr), data_(nullptr), next_free_(nullptr), initialized_(false) {
+  // Lazy initialization - don't allocate HIP memory until first use
+}
+
+void SmallSizePool::ensure_initialized() {
+  if (initialized_) {
+    return;
+  }
+  
   // Allocate pool of small buffers
   size_t pool_bytes = kPoolSize * sizeof(Block);
   buffer_ = static_cast<Block*>(std::malloc(pool_bytes));
   
-  CHECK_HIP_ERROR(hipMallocManaged(&data_, kPoolSize * kScalarSize));
+  hipError_t err = hipMallocManaged(&data_, kPoolSize * kScalarSize);
+  if (err != hipSuccess) {
+    std::free(buffer_);
+    buffer_ = nullptr;
+    data_ = nullptr;
+    // Don't throw - just disable the pool
+    initialized_ = true;
+    return;
+  }
   
   // Initialize free list
   for (size_t i = 0; i < kPoolSize; ++i) {
@@ -43,16 +62,22 @@ SmallSizePool::SmallSizePool() {
     buffer_[i].next = (i + 1 < kPoolSize) ? &buffer_[i + 1] : nullptr;
   }
   next_free_ = buffer_;
+  initialized_ = true;
 }
 
 SmallSizePool::~SmallSizePool() {
   if (data_) {
     hipFree(data_);
+    data_ = nullptr;
   }
-  std::free(buffer_);
+  if (buffer_) {
+    std::free(buffer_);
+    buffer_ = nullptr;
+  }
 }
 
 HipBuffer* SmallSizePool::malloc() {
+  ensure_initialized();
   if (next_free_ == nullptr) {
     return nullptr;
   }
@@ -68,15 +93,34 @@ void SmallSizePool::free(HipBuffer* buf) {
 }
 
 bool SmallSizePool::in_pool(HipBuffer* buf) {
+  if (!initialized_ || buffer_ == nullptr) {
+    return false;
+  }
   return buf >= &buffer_[0].buf && 
          buf < &buffer_[kPoolSize].buf;
 }
 
 RocmAllocator::RocmAllocator()
-    : memory_limit_(get_system_memory()),
-      max_pool_size_(memory_limit_ / 2) {}
+    : memory_limit_(0),
+      max_pool_size_(0),
+      initialized_(false) {}
+
+void RocmAllocator::ensure_initialized() {
+  if (initialized_) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (initialized_) {
+    return;  // Double-check after acquiring lock
+  }
+  memory_limit_ = get_system_memory();
+  max_pool_size_ = memory_limit_ / 2;
+  initialized_ = true;
+}
 
 Buffer RocmAllocator::malloc(size_t size) {
+  ensure_initialized();
+  
   // For very small allocations, use the scalar pool
   if (size <= kScalarSize) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -129,6 +173,7 @@ Buffer RocmAllocator::malloc(size_t size) {
 }
 
 Buffer RocmAllocator::malloc_async(size_t size, int device, hipStream_t stream) {
+  ensure_initialized();
   // For async allocation, we use regular malloc for now
   // HIP async memory management is more limited than CUDA
   return malloc(size);
@@ -184,6 +229,10 @@ void RocmAllocator::reset_peak_memory() {
 }
 
 size_t RocmAllocator::get_memory_limit() {
+  if (!initialized_) {
+    // Return a large default so memory checks pass before GPU init
+    return SIZE_MAX;
+  }
   return memory_limit_;
 }
 
@@ -211,8 +260,10 @@ void RocmAllocator::clear_cache() {
 }
 
 RocmAllocator& allocator() {
-  static RocmAllocator allocator_;
-  return allocator_;
+  // Use pointer to avoid destructor being called on exit
+  // which can cause issues with HIP shutdown order
+  static RocmAllocator* allocator_ = new RocmAllocator;
+  return *allocator_;
 }
 
 Buffer malloc_async(size_t size, CommandEncoder& encoder) {

@@ -34,6 +34,9 @@ class SmallSizePool {
   Block* buffer_{nullptr};
   void* data_{nullptr};
   Block* next_free_{nullptr};
+  bool initialized_{false};
+  
+  void ensure_initialized();
 
  public:
   SmallSizePool();
@@ -65,19 +68,21 @@ class RocmAllocator : public allocator::Allocator {
 
  private:
   void hip_free(HipBuffer* buf);
+  void ensure_initialized();
 
   RocmAllocator();
   friend RocmAllocator& allocator();
 
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
   size_t memory_limit_;
   size_t max_pool_size_;
+  bool initialized_{false};
   BufferCache<HipBuffer> buffer_cache_{
       64 * 1024,  // page_size: 64KB
       [](HipBuffer* buf) { return buf->size; },
       [](HipBuffer* buf) {
         if (buf->data) {
-          CHECK_HIP_ERROR(hipFree(buf->data));
+          hipFree(buf->data);  // Don't use CHECK_HIP_ERROR in destructor
         }
         delete buf;
       }};
