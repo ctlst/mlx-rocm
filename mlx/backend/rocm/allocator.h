@@ -83,11 +83,7 @@ class RocmAllocator : public allocator::Allocator {
       [](HipBuffer* buf) { return buf->size; },
       [](HipBuffer* buf) {
         if (buf->data) {
-          if (buf->device == -2) {
-            std::free(buf->data);  // CPU allocation
-          } else {
-            hipFree(buf->data);  // HIP allocation
-          }
+          std::free(buf->data);  // All allocations are CPU-based now
         }
         delete buf;
       }};
