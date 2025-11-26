@@ -278,5 +278,36 @@ struct Tanh {
   }
 };
 
+struct BitwiseInvert {
+  template <typename T>
+  __device__ T operator()(T x) {
+    return ~x;
+  }
+};
+
+// Complex operations - not supported on ROCm GPU
+// These are defined to allow compilation but will throw at runtime
+struct Conjugate {
+  template <typename T>
+  __device__ T operator()(T x) {
+    // Only defined for complex types which aren't supported
+    return x;
+  }
+};
+
+struct Imag {
+  template <typename T>
+  __device__ T operator()(T x) {
+    return T(0);
+  }
+};
+
+struct Real {
+  template <typename T>
+  __device__ T operator()(T x) {
+    return x;
+  }
+};
+
 } // namespace mlx::core::rocm
 

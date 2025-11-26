@@ -7,7 +7,9 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/arcsinh.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/arctan.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/arctanh.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/bitwise_invert.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/ceil.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/conjugate.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/cos.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/cosh.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/erf.hip
@@ -15,10 +17,12 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/exp.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/expm1.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/floor.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/imag.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/log.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/log1p.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/logical_not.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/negative.hip
+          ${CMAKE_CURRENT_SOURCE_DIR}/real.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/round.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/sigmoid.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/sign.hip

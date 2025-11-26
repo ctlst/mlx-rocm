@@ -103,6 +103,15 @@ constexpr bool supports_unary_op() {
   if constexpr (std::is_same_v<Op, LogicalNot>) {
     return std::is_same_v<In, Out> && std::is_same_v<In, bool>;
   }
+  if constexpr (std::is_same_v<Op, BitwiseInvert>) {
+    return std::is_same_v<In, Out> && std::is_integral_v<In> &&
+        !std::is_same_v<In, bool>;
+  }
+  // Complex operations not supported on ROCm GPU
+  if constexpr (std::is_same_v<Op, Conjugate> || std::is_same_v<Op, Imag> ||
+      std::is_same_v<Op, Real>) {
+    return false;
+  }
   return false;
 }
 

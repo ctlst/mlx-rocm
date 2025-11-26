@@ -221,3 +221,61 @@ Buffer malloc_async(size_t size, CommandEncoder& encoder) {
 
 } // namespace mlx::core::rocm
 
+namespace mlx::core::allocator {
+
+Allocator& allocator() {
+  return rocm::allocator();
+}
+
+void* Buffer::raw_ptr() {
+  if (!ptr_) {
+    return nullptr;
+  }
+  auto& buf = *static_cast<rocm::HipBuffer*>(ptr_);
+  return buf.data;
+}
+
+} // namespace mlx::core::allocator
+
+// Global memory functions required by mlx::core
+namespace mlx::core {
+
+size_t get_active_memory() {
+  return rocm::allocator().get_active_memory();
+}
+
+size_t get_peak_memory() {
+  return rocm::allocator().get_peak_memory();
+}
+
+void reset_peak_memory() {
+  return rocm::allocator().reset_peak_memory();
+}
+
+size_t set_memory_limit(size_t limit) {
+  return rocm::allocator().set_memory_limit(limit);
+}
+
+size_t get_memory_limit() {
+  return rocm::allocator().get_memory_limit();
+}
+
+size_t get_cache_memory() {
+  return rocm::allocator().get_cache_memory();
+}
+
+size_t set_cache_limit(size_t limit) {
+  return rocm::allocator().set_cache_limit(limit);
+}
+
+void clear_cache() {
+  rocm::allocator().clear_cache();
+}
+
+size_t set_wired_limit(size_t) {
+  // Not applicable for ROCm
+  return 0;
+}
+
+} // namespace mlx::core
+
