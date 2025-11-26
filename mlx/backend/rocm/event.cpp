@@ -51,8 +51,8 @@ void Event::wait(Stream stream) {
   
   if (stream.device == Device::gpu && ec->hip_event) {
     // Make GPU stream wait on the event
-    auto& d = rocm::device(stream.device);
-    hipStreamWaitEvent(d.get_stream(stream.index), ec->hip_event, 0);
+    auto& encoder = rocm::get_command_encoder(stream);
+    hipStreamWaitEvent(encoder.stream(), ec->hip_event, 0);
   } else {
     scheduler::enqueue(stream, [*this]() mutable { wait(); });
   }
@@ -63,8 +63,8 @@ void Event::signal(Stream stream) {
   
   if (stream.device == Device::gpu && ec->hip_event) {
     // Record event on GPU stream
-    auto& d = rocm::device(stream.device);
-    hipEventRecord(ec->hip_event, d.get_stream(stream.index));
+    auto& encoder = rocm::get_command_encoder(stream);
+    hipEventRecord(ec->hip_event, encoder.stream());
   }
   
   scheduler::enqueue(stream, [*this]() mutable {
