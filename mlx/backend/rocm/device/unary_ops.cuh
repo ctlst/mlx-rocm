@@ -166,6 +166,10 @@ struct Floor {
   __device__ T operator()(T x) {
     if constexpr (std::is_integral_v<T>) {
       return x;
+    } else if constexpr (std::is_same_v<T, hip_bfloat16>) {
+      return hip_bfloat16(floorf(static_cast<float>(x)));
+    } else if constexpr (std::is_same_v<T, __half>) {
+      return __half(floorf(static_cast<float>(x)));
     } else {
       return floor(x);
     }
