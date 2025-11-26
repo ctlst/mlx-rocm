@@ -26,3 +26,4 @@ void BitwiseBinary::eval_gpu(const std::vector<array>& inputs, array& out) {
   roctxRangePop();
 }
 } // namespace mlx::core
+
