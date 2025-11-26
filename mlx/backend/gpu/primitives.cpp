@@ -11,7 +11,10 @@
 #endif
 
 #if defined(MLX_USE_ROCM)
+// roctracer is optional - only used for profiling markers
+#if __has_include(<roctracer/roctx.h>)
 #include <roctracer/roctx.h>
+#endif
 #endif
 
 #include <cassert>
