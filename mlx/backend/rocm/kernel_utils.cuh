@@ -15,8 +15,8 @@
 
 // Type traits for detecting complex numbers (global scope for standard complex types)
 template <typename T>
-inline constexpr bool is_complex_v = std::is_same_v<T, complex64_t> ||
-    std::is_same_v<T, complex128_t>;
+inline constexpr bool is_complex_v = std::is_same_v<T, mlx::core::complex64_t> ||
+    std::is_same_v<T, mlx::core::complex128_t>;
 
 namespace mlx::core::rocm {
 
