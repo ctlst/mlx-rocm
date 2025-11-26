@@ -16,9 +16,47 @@ namespace {
 constexpr size_t kPoolSize = 4096;
 constexpr size_t kScalarSize = 16;
 
+// Global flag to track if HIP is working
+static bool g_hip_checked = false;
+static bool g_hip_available = false;
+
+bool check_hip_available() {
+  if (g_hip_checked) {
+    return g_hip_available;
+  }
+  g_hip_checked = true;
+  
+  // Try basic HIP init
+  hipError_t err = hipInit(0);
+  if (err != hipSuccess) {
+    g_hip_available = false;
+    return false;
+  }
+  
+  int device_count = 0;
+  err = hipGetDeviceCount(&device_count);
+  if (err != hipSuccess || device_count == 0) {
+    g_hip_available = false;
+    return false;
+  }
+  
+  g_hip_available = true;
+  return true;
+}
+
 // Get system memory info - called lazily
 size_t get_system_memory() {
-  // Try to query GPU memory, but don't crash if HIP isn't ready
+  if (!check_hip_available()) {
+    return 8ULL * 1024 * 1024 * 1024;
+  }
+  
+  // Set device 0 as current
+  hipError_t set_err = hipSetDevice(0);
+  if (set_err != hipSuccess) {
+    return 8ULL * 1024 * 1024 * 1024;
+  }
+  
+  // Now query memory
   size_t free_mem = 0, total_mem = 0;
   hipError_t err = hipMemGetInfo(&free_mem, &total_mem);
   if (err == hipSuccess && total_mem > 0) {
@@ -113,13 +151,35 @@ void RocmAllocator::ensure_initialized() {
   if (initialized_) {
     return;  // Double-check after acquiring lock
   }
-  memory_limit_ = get_system_memory();
-  max_pool_size_ = memory_limit_ / 2;
+  
+  // Try to initialize HIP - if it fails, we'll use fallback memory handling
+  try {
+    memory_limit_ = get_system_memory();
+    max_pool_size_ = memory_limit_ / 2;
+  } catch (...) {
+    // HIP initialization failed, use defaults
+    memory_limit_ = 8ULL * 1024 * 1024 * 1024;  // 8GB
+    max_pool_size_ = memory_limit_ / 2;
+  }
   initialized_ = true;
 }
 
 Buffer RocmAllocator::malloc(size_t size) {
   ensure_initialized();
+  
+  // If HIP is not available, fall back to CPU allocation
+  if (!check_hip_available()) {
+    void* ptr = std::malloc(size);
+    if (!ptr && size > 0) {
+      throw std::runtime_error(
+          "[ROCm] Failed to allocate " + std::to_string(size) + " bytes (CPU fallback)");
+    }
+    auto* buf = new HipBuffer{ptr, size, -2};  // -2 indicates CPU allocation
+    std::lock_guard<std::mutex> lock(mutex_);
+    active_memory_ += size;
+    peak_memory_ = std::max(peak_memory_, active_memory_);
+    return Buffer{buf};
+  }
   
   // For very small allocations, use the scalar pool
   if (size <= kScalarSize) {
@@ -205,7 +265,13 @@ void RocmAllocator::free(Buffer buffer) {
 
 void RocmAllocator::hip_free(HipBuffer* buf) {
   if (buf->data) {
-    hipFree(buf->data);
+    if (buf->device == -2) {
+      // CPU allocation - use std::free
+      std::free(buf->data);
+    } else {
+      // HIP allocation
+      hipFree(buf->data);
+    }
   }
   delete buf;
 }

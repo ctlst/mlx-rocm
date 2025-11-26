@@ -7,6 +7,7 @@
 #include "mlx/backend/rocm/rocm_utils.h"
 
 #include <hip/hip_runtime.h>
+#include <cstdlib>
 #include <mutex>
 #include <set>
 #include <utility>
@@ -82,7 +83,11 @@ class RocmAllocator : public allocator::Allocator {
       [](HipBuffer* buf) { return buf->size; },
       [](HipBuffer* buf) {
         if (buf->data) {
-          hipFree(buf->data);  // Don't use CHECK_HIP_ERROR in destructor
+          if (buf->device == -2) {
+            std::free(buf->data);  // CPU allocation
+          } else {
+            hipFree(buf->data);  // HIP allocation
+          }
         }
         delete buf;
       }};

@@ -26,9 +26,12 @@ Event::Event(Stream stream) : stream_(stream) {
     delete ec;
   };
   auto* ec = new EventCounter{};
-  // Only create HIP event for GPU streams
+  // Only create HIP event for GPU streams, and only if HIP init succeeds
   if (stream.device == Device::gpu) {
-    hipEventCreate(&ec->hip_event);
+    hipError_t err = hipEventCreate(&ec->hip_event);
+    if (err != hipSuccess) {
+      ec->hip_event = nullptr;  // Fall back to CPU-based sync
+    }
   }
   event_ = std::shared_ptr<void>(ec, dtor);
 }
