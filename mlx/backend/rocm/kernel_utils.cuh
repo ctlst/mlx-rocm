@@ -13,6 +13,11 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_bfloat16.h>
 
+// Type traits for detecting complex numbers (global scope for standard complex types)
+template <typename T>
+inline constexpr bool is_complex_v = std::is_same_v<T, complex64_t> ||
+    std::is_same_v<T, complex128_t>;
+
 namespace mlx::core::rocm {
 
 // Alias TypeTag to type_identity for compatibility
@@ -43,11 +48,6 @@ template <typename T>
 inline constexpr bool is_floating_v =
     std::is_same_v<T, float> || std::is_same_v<T, double> ||
     std::is_same_v<T, float16_t> || std::is_same_v<T, bfloat16_t>;
-
-// Type traits for detecting complex numbers.
-template <typename T>
-inline constexpr bool is_complex_v = std::is_same_v<T, complex64_t> ||
-    std::is_same_v<T, complex128_t>;
 
 // Type traits for detecting complex or real floating point numbers.
 template <typename T>
