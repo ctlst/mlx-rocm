@@ -30,6 +30,13 @@ def main():
     test_section("Import Test")
     try:
         import mlx.core as mx
+import os
+
+# Force CPU mode if environment variable is set
+if os.getenv('MLX_DISABLE_GPU') == '1':
+    mx.set_default_device(mx.cpu)
+
+print(f"Default device: {mx.default_device()}")
         print(f"  ✅ MLX imported successfully")
         print(f"     Version info: mlx.core loaded")
     except ImportError as e:

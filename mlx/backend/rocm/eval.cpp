@@ -66,7 +66,7 @@ bool hip_initialized = false;
 }  // namespace
 
 bool is_available() {
-  // Check environment variable first
+  // Check environment variable first - this overrides everything
   if (const char* env = std::getenv("MLX_DISABLE_GPU")) {
     if (std::string(env) == "1" || std::string(env) == "true") {
       return false;

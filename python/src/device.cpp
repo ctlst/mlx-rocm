@@ -1,6 +1,8 @@
 // Copyright © 2023-2024 Apple Inc.
 
 #include <sstream>
+#include <cstdlib>
+#include <string>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>
@@ -13,6 +15,13 @@ namespace nb = nanobind;
 using namespace nb::literals;
 
 void init_device(nb::module_& m) {
+  // Check environment variable and set default device before anything else
+  if (const char* env = std::getenv("MLX_DISABLE_GPU")) {
+    if (std::string(env) == "1" || std::string(env) == "true") {
+      mx::set_default_device(mx::Device::cpu);
+    }
+  }
+
   auto device_class = nb::class_<mx::Device>(
       m, "Device", R"pbdoc(A device to run operations on.)pbdoc");
   nb::enum_<mx::Device::DeviceType>(m, "DeviceType")
