@@ -16,42 +16,80 @@ namespace {
 constexpr size_t kPoolSize = 4096;
 constexpr size_t kScalarSize = 16;
 
-// For now, use CPU-only allocation in the common allocator path
-// GPU memory will be allocated separately when kernels actually run
-// This avoids HIP initialization issues during array creation
-
-// Get system memory info - use a safe default, no HIP calls
-size_t get_system_memory() {
-  // Return 8GB as default - no HIP calls to avoid segfaults
+// Get GPU memory info safely
+size_t get_gpu_memory() {
+  size_t free, total;
+  hipError_t err = hipMemGetInfo(&free, &total);
+  if (err == hipSuccess) {
+    return total;
+  }
+  // Fallback to 8GB if HIP call fails
   return 8ULL * 1024 * 1024 * 1024;
 }
 
 } // namespace
 
-// SmallSizePool is disabled - not using HIP memory pool
-SmallSizePool::SmallSizePool() 
+SmallSizePool::SmallSizePool()
     : buffer_(nullptr), data_(nullptr), next_free_(nullptr), initialized_(false) {
 }
 
 void SmallSizePool::ensure_initialized() {
-  // Disabled - using regular malloc instead
+  if (initialized_) {
+    return;
+  }
+
+  auto num_blocks = kPoolSize / kScalarSize;
+  buffer_ = new Block[num_blocks];
+  next_free_ = buffer_;
+
+  // Allocate GPU memory for the pool
+  CHECK_HIP_ERROR(hipMalloc(&data_, kPoolSize));
+
+  auto curr = next_free_;
+  for (size_t i = 1; i < num_blocks; ++i) {
+    curr->next = buffer_ + i;
+    curr = curr->next;
+  }
+  curr->next = nullptr;
+
   initialized_ = true;
 }
 
 SmallSizePool::~SmallSizePool() {
+  if (data_) {
+    hipFree(data_);
+  }
+  delete[] buffer_;
 }
 
 HipBuffer* SmallSizePool::malloc() {
-  // Disabled - always return nullptr to use regular malloc path
-  return nullptr;
+  ensure_initialized();
+
+  if (next_free_ == nullptr) {
+    return nullptr;
+  }
+
+  Block* b = next_free_;
+  uint64_t i = next_free_ - buffer_;
+  next_free_ = next_free_->next;
+
+  b->buf.data = static_cast<char*>(data_) + i * kScalarSize;
+  b->buf.size = kScalarSize;
+  b->buf.device = -2;  // Mark as pool allocation
+  return &b->buf;
 }
 
 void SmallSizePool::free(HipBuffer* buf) {
-  // Not used
+  auto b = reinterpret_cast<Block*>(buf);
+  b->next = next_free_;
+  next_free_ = b;
 }
 
 bool SmallSizePool::in_pool(HipBuffer* buf) {
-  return false;
+  auto b = reinterpret_cast<Block*>(buf);
+  int64_t block_num = b - buffer_;
+  auto num_blocks = kPoolSize / kScalarSize;
+  return block_num >= 0 && block_num < static_cast<int64_t>(num_blocks);
 }
 
 RocmAllocator::RocmAllocator()
@@ -67,23 +105,34 @@ void RocmAllocator::ensure_initialized() {
   if (initialized_) {
     return;  // Double-check after acquiring lock
   }
-  memory_limit_ = get_system_memory();
-  max_pool_size_ = memory_limit_ / 2;
+  memory_limit_ = get_gpu_memory();
+  max_pool_size_ = memory_limit_ * 0.9;  // Use 90% of available GPU memory
   initialized_ = true;
 }
 
 Buffer RocmAllocator::malloc(size_t size) {
   ensure_initialized();
-  
-  // Use CPU allocation for now - GPU memory is allocated separately
-  // when kernels run via hipMalloc in the kernel launch path
-  void* ptr = std::malloc(size);
-  if (!ptr && size > 0) {
-    throw std::runtime_error(
-        "[ROCm] Failed to allocate " + std::to_string(size) + " bytes");
+
+  // Try small pool first for small allocations
+  if (size <= kScalarSize) {
+    auto* buf = scalar_pool_.malloc();
+    if (buf) {
+      std::lock_guard<std::mutex> lock(mutex_);
+      active_memory_ += size;
+      peak_memory_ = std::max(peak_memory_, active_memory_);
+      return Buffer{buf};
+    }
   }
-  auto* buf = new HipBuffer{ptr, size, -2};  // -2 indicates CPU allocation
-  
+
+  // Allocate GPU memory
+  void* ptr = nullptr;
+  hipError_t err = hipMalloc(&ptr, size);
+  if (err != hipSuccess || (!ptr && size > 0)) {
+    throw std::runtime_error(
+        "[ROCm] Failed to allocate " + std::to_string(size) + " bytes of GPU memory");
+  }
+  auto* buf = new HipBuffer{ptr, size, 0};  // 0 indicates GPU allocation
+
   std::lock_guard<std::mutex> lock(mutex_);
   active_memory_ += size;
   peak_memory_ = std::max(peak_memory_, active_memory_);
@@ -91,9 +140,21 @@ Buffer RocmAllocator::malloc(size_t size) {
 }
 
 Buffer RocmAllocator::malloc_async(size_t size, int device, hipStream_t stream) {
-  // For async allocation, we use regular malloc for now
-  // HIP async memory management is more limited than CUDA
-  return malloc(size);
+  ensure_initialized();
+
+  // Allocate GPU memory asynchronously if possible
+  void* ptr = nullptr;
+  hipError_t err = hipMalloc(&ptr, size);
+  if (err != hipSuccess || (!ptr && size > 0)) {
+    throw std::runtime_error(
+        "[ROCm] Failed to allocate " + std::to_string(size) + " bytes of GPU memory asynchronously");
+  }
+  auto* buf = new HipBuffer{ptr, size, device};
+
+  std::lock_guard<std::mutex> lock(mutex_);
+  active_memory_ += size;
+  peak_memory_ = std::max(peak_memory_, active_memory_);
+  return Buffer{buf};
 }
 
 void RocmAllocator::free(Buffer buffer) {
@@ -122,8 +183,13 @@ void RocmAllocator::free(Buffer buffer) {
 
 void RocmAllocator::hip_free(HipBuffer* buf) {
   if (buf->data) {
-    // All allocations are now CPU-based (std::malloc)
-    std::free(buf->data);
+    if (buf->device == -2) {
+      // This was allocated from the scalar pool, let the pool handle it
+      // (but this shouldn't happen since pool buffers are handled separately)
+    } else {
+      // GPU allocation
+      hipFree(buf->data);
+    }
   }
   delete buf;
 }

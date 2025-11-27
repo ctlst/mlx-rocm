@@ -14,11 +14,19 @@
 #include <hip/hip_bfloat16.h>
 
 // Type traits for detecting complex numbers (global scope for standard complex types)
+// Note: These are forward declared in mlx::core namespace, so we use the definitions directly
 template <typename T>
-inline constexpr bool is_complex_v = std::is_same_v<T, mlx::core::complex64_t> ||
-    std::is_same_v<T, mlx::core::complex128_t>;
+inline constexpr bool is_complex_v = false; // Default to false
+
+// Specializations will be added in the mlx::core::rocm namespace after complex types are available
 
 namespace mlx::core::rocm {
+
+// Specialize is_complex_v for MLX complex types now that we're in the right namespace
+template <>
+inline constexpr bool is_complex_v<mlx::core::complex64_t> = true;
+template <>
+inline constexpr bool is_complex_v<mlx::core::complex128_t> = true;
 
 // Alias TypeTag to type_identity for compatibility
 template <typename T>

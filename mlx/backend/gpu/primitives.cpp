@@ -19,8 +19,8 @@
 
 #include <cassert>
 
-// Safe check for roctx availability - if the function is declared, use it
-#if defined(MLX_USE_ROCM) && defined(roctxRangePush)
+// Safe check for roctx availability - check if header was included
+#if defined(MLX_USE_ROCM) && __has_include(<roctracer/roctx.h>)
 #define MLX_PROFILER_RANGE(message) roctxRangePush(message); struct RoctxRangeGuard { ~RoctxRangeGuard() { roctxRangePop(); } } _roctx_guard
 #elif defined(MLX_USE_CUDA)
 #define MLX_PROFILER_RANGE(message) nvtx3::scoped_range r(message)
