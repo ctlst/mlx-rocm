@@ -14,6 +14,7 @@ target_sources(
           ${CMAKE_CURRENT_SOURCE_DIR}/primitives.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/worker.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/jit_module.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/copy.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/copy/copy_contiguous.hip
           ${CMAKE_CURRENT_SOURCE_DIR}/copy/copy_general.hip
