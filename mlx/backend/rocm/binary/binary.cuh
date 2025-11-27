@@ -5,6 +5,7 @@
 #include "mlx/backend/common/binary.h"
 #include "mlx/backend/rocm/device.h"
 #include "mlx/backend/rocm/device/binary_ops.cuh"
+#include "mlx/backend/rocm/jit_module.h"
 #include "mlx/backend/rocm/kernel_utils.cuh"
 #include "mlx/dtype_utils.h"
 #include "mlx/primitives.h"
@@ -157,6 +158,79 @@ constexpr bool supports_binary_op() {
 
 } // namespace rocm
 
+// Kernel builders for binary operations
+template <typename Op>
+KernelBuilderResult build_binary_kernel(Dtype in_dtype, Dtype out_dtype, BinaryOpType bopt, bool use_int64) {
+  std::string source = R"(
+#include <hip/hip_runtime.h>
+
+extern "C" {
+
+)";
+
+  // Determine operation name
+  std::string op_name;
+  if constexpr (std::is_same_v<Op, Add>) {
+    op_name = "add";
+  } else {
+    throw std::runtime_error("Unsupported binary operation for JIT kernel");
+  }
+
+  // Generate kernel for the specific types
+  std::string kernel_name = op_name + "_kernel_" + dtype_to_string(in_dtype) + "_" + dtype_to_string(out_dtype) +
+                           "_" + std::to_string(static_cast<int>(bopt)) + (use_int64 ? "_int64" : "_uint32");
+
+  std::string in_type_name;
+  std::string out_type_name;
+  std::string idx_type = use_int64 ? "int64_t" : "uint32_t";
+
+  switch (in_dtype) {
+    case float32: in_type_name = "float"; break;
+    case float64: in_type_name = "double"; break;
+    case int32: in_type_name = "int32_t"; break;
+    default: throw std::runtime_error("Unsupported input dtype for binary kernel");
+  }
+
+  switch (out_dtype) {
+    case float32: out_type_name = "float"; break;
+    case float64: out_type_name = "double"; break;
+    case int32: out_type_name = "int32_t"; break;
+    default: throw std::runtime_error("Unsupported output dtype for binary kernel");
+  }
+
+  source += "__global__ void " + kernel_name + "(const " + in_type_name + "* a, const " +
+           in_type_name + "* b, " + out_type_name + "* out, " + idx_type + " size";
+
+  // Add parameters for general case
+  if (bopt == BinaryOpType::General) {
+    source += ", const int32_t* shape, const int64_t* a_strides, const int64_t* b_strides, int ndim";
+  }
+  source += ") {\n";
+
+  source += "  " + idx_type + " idx = blockIdx.x * blockDim.x + threadIdx.x;\n";
+  source += "  if (idx < size) {\n";
+
+  if (bopt == BinaryOpType::VectorVector || bopt == BinaryOpType::ScalarScalar) {
+    source += "    out[idx] = (" + out_type_name + ")(a[idx] + b[idx]);\n";
+  } else if (bopt == BinaryOpType::ScalarVector) {
+    source += "    " + in_type_name + " a_val = a[0];\n";
+    source += "    out[idx] = (" + out_type_name + ")(a_val + b[idx]);\n";
+  } else if (bopt == BinaryOpType::VectorScalar) {
+    source += "    " + in_type_name + " b_val = b[0];\n";
+    source += "    out[idx] = (" + out_type_name + ")(a[idx] + b_val);\n";
+  } else if (bopt == BinaryOpType::General) {
+    source += "    // General case - not implemented yet\n";
+    source += "    out[idx] = (" + out_type_name + ")0;\n";
+  }
+
+  source += "  }\n";
+  source += "}\n\n";
+
+  source += "}\n"; // extern "C"
+
+  return {false, source, {kernel_name}};
+}
+
 template <typename Op>
 void binary_op_gpu_inplace(
     const std::vector<array>& inputs,
@@ -165,19 +239,75 @@ void binary_op_gpu_inplace(
     const Stream& s) {
   auto& a = inputs[0];
   auto& b = inputs[1];
-  
+
   if (out.size() == 0) {
     return;
   }
-  
+
   auto& encoder = rocm::get_command_encoder(s);
   encoder.set_input_array(a);
   encoder.set_input_array(b);
   encoder.set_output_array(out);
-  
+
   auto bopt = get_binary_op_type(a, b);
   bool large = out.size() > UINT32_MAX;
-  
+
+  // Special case: Use JIT for Add operation
+  if constexpr (std::is_same_v<Op, Add>) {
+    int block_size = 256;
+    size_t size = out.size();
+    int num_blocks;
+
+    if (bopt == BinaryOpType::General) {
+      num_blocks = (size + block_size - 1) / block_size;
+    } else {
+      constexpr int N_READS = 4;
+      num_blocks = (size + block_size * N_READS - 1) / (block_size * N_READS);
+    }
+
+    // Get or create JIT module for this kernel
+    auto module_name = std::string("binary_add_") + dtype_to_string(a.dtype()) + "_" +
+                       dtype_to_string(out.dtype()) + "_" +
+                       std::to_string(static_cast<int>(bopt)) +
+                       (large ? "_int64" : "_uint32");
+
+    auto& jit_module = get_jit_module(
+        out.device(), module_name,
+        [dtype_a = a.dtype(), dtype_out = out.dtype(), bopt, large]() {
+          return build_binary_kernel<Add>(dtype_a, dtype_out, bopt, large);
+        });
+
+    // Get the kernel function
+    auto kernel_func = jit_module.get_kernel(module_name);
+
+    // Prepare arguments
+    KernelArgs args;
+    args.append(a);  // input a
+    args.append(b);  // input b
+    args.append(out); // output
+
+    if (large) {
+      args.append(static_cast<int64_t>(size));
+    } else {
+      args.append(static_cast<uint32_t>(size));
+    }
+
+    // Add parameters for general case
+    if (bopt == BinaryOpType::General) {
+      // For simplicity, we'll skip the general case for now and use a fallback
+      // This would need more complex argument passing for strides/shapes
+      std::cout << "Warning: General binary operations not yet supported in JIT mode, falling back to old implementation" << std::endl;
+      goto fallback;
+    }
+
+    // Launch the kernel
+    encoder.add_kernel_node(
+        kernel_func,
+        dim3(num_blocks), dim3(block_size), 0, args.args());
+    return;
+  }
+
+fallback:
   // Use ROCm-specific dispatch that excludes complex64
   rocm::dispatch_all_types_rocm(a.dtype(), [&](auto in_type_tag) {
     rocm::dispatch_all_types_rocm(out.dtype(), [&](auto out_type_tag) {
@@ -188,12 +318,12 @@ void binary_op_gpu_inplace(
 
         using InType = rocm::hip_type_t<In_T>;
         using OutType = rocm::hip_type_t<Out_T>;
-        
+
         constexpr int N_READS = 4;
         int block_size = 256;
         size_t size = out.size();
         int num_blocks = (size + block_size * N_READS - 1) / (block_size * N_READS);
-        
+
         switch (bopt) {
           case BinaryOpType::ScalarScalar:
           case BinaryOpType::VectorVector:
